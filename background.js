@@ -705,11 +705,9 @@ async function handleSetAskAboutSites(enabled) {
  * result so popup/dashboard can show a banner without either one
  * triggering its own network request on every open.
  *
- * UPDATE_REPO_OWNER/UPDATE_REPO_NAME are placeholders — the repository
- * doesn't exist yet. isUpdateCheckerConfigured() detects the placeholder
- * and short-circuits to a harmless no-op (returns the last cached status,
- * or the untouched default, no fetch attempted) until these are filled
- * in with the real GitHub owner/repo.
+ * The repository is now hosted at github.com/UprightCode-hub/RoleEcho.
+ * Keep the owner/name constants together so a future repository move only
+ * requires changing these two values.
  *
  * Never throws and never surfaces a network/parse error to the user — a
  * failed check just stamps lastChecked (so a broken/offline endpoint
@@ -718,8 +716,8 @@ async function handleSetAskAboutSites(enabled) {
  * anything on its own — informational only, always links out to GitHub
  * for the person to update manually.
  * ------------------------------------------------------------------- */
-const UPDATE_REPO_OWNER = 'PLACEHOLDER_OWNER';
-const UPDATE_REPO_NAME = 'PLACEHOLDER_REPOSITORY';
+const UPDATE_REPO_OWNER = 'UprightCode-hub';
+const UPDATE_REPO_NAME = 'RoleEcho';
 const UPDATE_MANIFEST_URL = `https://raw.githubusercontent.com/${UPDATE_REPO_OWNER}/${UPDATE_REPO_NAME}/main/manifest.json`;
 const UPDATE_REPO_RELEASES_URL = `https://github.com/${UPDATE_REPO_OWNER}/${UPDATE_REPO_NAME}/releases`;
 const UPDATE_CHECK_KEY = 'jds_update_check'; // storage.local — { lastChecked, remoteVersion, updateAvailable, error }
