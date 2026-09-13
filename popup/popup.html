@@ -1,0 +1,282 @@
+<!--
+  FILE: popup/popup.html
+  v1.3 — glass/status-first redesign. The existing action IDs are kept
+  because popup.js in this checkout still wires backup and clear directly.
+
+  v1.1.0 — the toolbar popup. Didn't exist before this version; the
+  extension had no visible feedback of any kind. This answers three
+  questions at a glance: is it on, what happened on THIS tab, and how
+  many jobs are tracked overall — plus the two commands the original
+  Tampermonkey script exposed via GM_registerMenuCommand.
+
+  v1.2.1 — added the #muted-note / #empty-state / #history-panel /
+  #history-list markup that popup.js (v1.2.0) already expected but this
+  file never gained, which was throwing "Cannot read properties of null
+  (reading 'style')" every time the popup opened.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RoleEcho</title>
+<style>
+  :root {
+    --paper: #F5F4F0;
+    --ink: #17181B;
+    --ink-soft: #55585E;
+    --ink-faint: #8A8D93;
+    --rule: #D9D7D0;
+    --alert: #C93C4E;
+    --alert-bg: #FBEAEC;
+    --ok: #1E8E3E;
+    --ok-bg: #E9F6EC;
+    --ok-rule: #C3E0CC;
+    --alert-rule: #F0CDD2;
+    --watch-bg: #EFEEE9;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    --glass-dense: rgba(255,255,255,0.80);
+    --glass-shadow-dense: 0 4px 16px rgba(23,24,27,0.07), inset 0 1px 0 rgba(255,255,255,0.6);
+    --ink-glass: rgba(23,24,27,0.85);
+    --alert-glass: rgba(201,60,78,0.85);
+  }
+  * { box-sizing: border-box; }
+  body {
+    position: relative;
+    margin: 0;
+    width: 320px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 13.5px;
+    line-height: 1.45;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(60% 50% at 15% 0%, rgba(184,134,11,0.14), transparent 60%),
+      radial-gradient(55% 45% at 90% 10%, rgba(30,142,62,0.12), transparent 60%),
+      radial-gradient(60% 60% at 50% 110%, rgba(201,60,78,0.07), transparent 60%),
+      var(--paper);
+  }
+  header {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  header img { width: 24px; height: 24px; flex-shrink: 0; }
+  header h1 {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  header .sub { font-size: 11px; color: var(--ink-faint); margin-top: 1px; }
+
+  .status-card {
+    margin: 14px 16px 0;
+    padding: 16px 16px 14px;
+    border-radius: 16px;
+    background: var(--glass-dense);
+    border: 1px solid var(--rule);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    box-shadow: var(--glass-shadow-dense);
+  }
+  .status-card.ok { background: rgba(233,246,236,0.72); border-color: var(--ok-rule); }
+  .status-card.alert { background: rgba(251,234,236,0.72); border-color: var(--alert-rule); }
+
+  .status-row { display: flex; align-items: flex-start; gap: 10px; }
+  .status-dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--ink-faint);
+    margin-top: 4px; flex-shrink: 0;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.45);
+  }
+  .status-card.ok .status-dot { background: var(--ok); }
+  .status-card.alert .status-dot { background: var(--alert); }
+
+  .status-title { font-weight: 700; font-size: 14.5px; margin-bottom: 3px; }
+  .status-card.ok .status-title { color: var(--ok); }
+  .status-card.alert .status-title { color: var(--alert); }
+  .status-detail { color: var(--ink-soft); font-size: 12.5px; }
+  .status-detail b { color: var(--ink); }
+
+  .consent-banner {
+    margin: 14px 16px 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--glass-dense);
+    border: 1px solid #F0DFAF;
+    backdrop-filter: blur(12px) saturate(1.3);
+    -webkit-backdrop-filter: blur(12px) saturate(1.3);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  .consent-banner a { color: var(--ink); font-weight: 600; }
+
+  .update-banner {
+    margin: 10px 16px 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--glass-dense);
+    border: 1px solid var(--ok-rule);
+    backdrop-filter: blur(12px) saturate(1.3);
+    -webkit-backdrop-filter: blur(12px) saturate(1.3);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  .update-banner a { color: var(--ink); font-weight: 600; }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 10px 16px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(217,215,208,0.7);
+  }
+  .stat-row .count { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+  .stat-row .label { color: var(--ink-faint); font-size: 11px; text-align: right; max-width: 200px; }
+
+  .actions { padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+  button {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 9px 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    border: 1px solid var(--rule);
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: var(--ink);
+    text-align: left;
+  }
+  button:hover {
+    background: var(--ink-glass); color: var(--paper); border-color: var(--ink);
+    backdrop-filter: blur(10px) saturate(1.3);
+    -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  }
+  button.danger:hover {
+    background: var(--alert-glass); border-color: var(--alert);
+    backdrop-filter: blur(10px) saturate(1.3);
+    -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  }
+
+  #action-feedback {
+    padding: 0 16px 12px;
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    min-height: 14px;
+  }
+
+  .muted-note {
+    margin: 6px 16px 0;
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-align: right;
+  }
+  .empty-state {
+    margin: 14px 16px 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--glass-dense);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px dashed var(--rule);
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+  .history-panel { margin: 14px 16px 0; }
+  .history-heading {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--ink-faint);
+    margin-bottom: 6px;
+  }
+  .hist-item {
+    display: flex;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .hist-item:last-child { border-bottom: none; }
+  .hist-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    margin-top: 4px; flex-shrink: 0;
+    background: var(--ink-faint);
+  }
+  .hist-dot.ok { background: var(--ok); }
+  .hist-dot.alert { background: var(--alert); }
+  .hist-dot.muted { background: var(--ink-faint); }
+  .hist-body { min-width: 0; }
+  .hist-label {
+    font-size: 12px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .hist-detail {
+    font-size: 11.5px; color: var(--ink-soft);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .hist-time { font-size: 10.5px; color: var(--ink-faint); margin-top: 1px; }
+</style>
+</head>
+<body>
+  <header>
+    <img src="../icons/icon48.png" alt="">
+    <div>
+      <h1>RoleEcho</h1>
+      <div class="sub" id="header-sub">Checking status…</div>
+    </div>
+  </header>
+
+  <div id="update-banner" class="update-banner" style="display:none;"></div>
+
+  <div id="consent-banner" class="consent-banner" style="display:none;"></div>
+
+  <div id="status-card" class="status-card">
+    <div class="status-row">
+      <div class="status-dot"></div>
+      <div>
+        <div class="status-title" id="status-title">Checking this tab…</div>
+        <div class="status-detail" id="status-detail"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="count" id="record-count">–</div>
+    <div class="label">job postings tracked<br>(last 60 days)</div>
+  </div>
+  <div id="muted-note" class="muted-note" style="display:none;"></div>
+
+  <div id="empty-state" class="empty-state" style="display:none;">
+    No job postings tracked yet — browse to a job page to get started.
+  </div>
+
+  <div id="history-panel" class="history-panel" style="display:none;">
+    <div class="history-heading">Recent activity</div>
+    <div id="history-list"></div>
+  </div>
+
+  <div class="actions">
+    <button id="btn-dashboard" type="button">Open dashboard</button>
+    <button id="btn-backup">Copy tracked-job backup to clipboard</button>
+    <button id="btn-clear" class="danger">Clear all tracked job data</button>
+  </div>
+  <div id="action-feedback"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

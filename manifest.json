@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "RoleEcho",
+  "version": "1.3",
+  "description": "Warns you when a job posting tab is a duplicate of one you've already seen — a toolbar badge and popup show what it's doing on every page.",
+
+  "permissions": [
+    "storage",
+    "userScripts",
+    "tabs",
+    "clipboardWrite",
+    "alarms"
+  ],
+
+  "host_permissions": [
+    "<all_urls>"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "RoleEcho",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": ["content-scripts/sniffer.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
