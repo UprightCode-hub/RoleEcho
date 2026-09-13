@@ -41,17 +41,92 @@ repetition quietly so the searcher can spend attention on new opportunities.
 
 ## Install from source
 
-RoleEcho is currently distributed as an open-source unpacked extension rather
-than through the Chrome Web Store.
+RoleEcho is currently distributed as source code. It is not published in the
+Chrome Web Store, so you must install it as an **unpacked extension**. You do
+not need Node.js, npm, Python, or a build step.
 
-1. Download or clone this repository.
-2. Open `chrome://extensions` in Chrome.
-3. Enable **Developer mode**.
-4. Select **Load unpacked** and choose the RoleEcho folder.
-5. Complete the setup tab. Chrome 138 and newer also require **Allow User Scripts** on RoleEcho's Details page.
+### Option A: Clone with Git
 
-The setup page explains the permission and walks through the required toggle.
-No account or additional configuration is required.
+Use this option if Git is installed on your computer:
+
+```bash
+git clone https://github.com/UprightCode-hub/RoleEcho.git
+```
+
+The command creates a `RoleEcho` folder. Keep that folder somewhere you will
+not delete, because the browser loads the extension directly from it.
+
+### Option B: Download and unzip the project
+
+1. Open the [RoleEcho repository](https://github.com/UprightCode-hub/RoleEcho)
+	on GitHub.
+2. Select **Code**, then **Download ZIP**.
+3. Open your Downloads folder and extract the ZIP file. On Windows, right-click
+	it and choose **Extract All**.
+4. Open the extracted project folder. Select the folder that directly contains
+	`manifest.json`, `background.js`, `content-scripts`, `popup`, and the other
+	project folders. Do not select the ZIP file or an outer folder that only
+	contains another `RoleEcho` folder.
+
+### Load the unpacked extension
+
+These steps use Chrome. Edge, Brave, Vivaldi, Opera, and other Chromium-based
+browsers use an equivalent extensions page and support the same general
+process. RoleEcho currently depends on the Chromium `chrome.userScripts` API;
+Firefox is not a supported installation target at this time.
+
+1. Open your browser's extensions page:
+	- Chrome: enter `chrome://extensions` in the address bar.
+	- Edge: enter `edge://extensions`.
+	- Brave: enter `brave://extensions`.
+	- Other Chromium browsers: open their Extensions page from the browser menu.
+2. Turn on **Developer mode**. In Chrome and Edge, this switch is usually in
+	the top-right corner.
+3. Select **Load unpacked**.
+4. Choose the extracted or cloned RoleEcho folder, the one containing
+	`manifest.json`, and confirm.
+5. Pin RoleEcho from the puzzle-piece **Extensions** menu if you want quick
+	access to its popup. Pinning is optional for detection.
+
+### Allow User Scripts
+
+RoleEcho uses Chrome's User Scripts API to inspect detected job pages. The
+browser must allow this before RoleEcho can work:
+
+- **Chrome before version 138:** enabling **Developer mode** on the extensions
+  page also enables the required User Scripts capability.
+- **Chrome 138 and newer:** open RoleEcho's **Details** page from
+  `chrome://extensions`, then turn on **Allow User Scripts**. Developer mode
+  must still be enabled so the unpacked extension can remain installed.
+
+Edge and other Chromium browsers may place this setting in a slightly
+different location or use different wording. Look for **Allow User Scripts**
+on RoleEcho's details or permissions page. The RoleEcho setup tab also checks
+this setting and explains what is still needed.
+
+## First launch and accessing RoleEcho
+
+After loading the extension, RoleEcho opens its setup tab. Follow the prompts
+to give consent for checking job-page content and confirm that User Scripts are
+enabled. If you close the setup tab, open it again from the extension's details
+page or reload the unpacked extension from the extensions page.
+
+You can access the application in three ways:
+
+- **Automatic detection:** visit a job posting in a normal browser tab. RoleEcho
+  records the posting and shows a small warning in the page when it matches a
+  posting already seen in an unrelated tab.
+- **Toolbar popup:** select the pinned RoleEcho icon, or select RoleEcho from
+  the puzzle-piece **Extensions** menu. The popup shows the current tab's
+  status, tracked-posting count, and recent activity.
+- **Dashboard:** open the RoleEcho popup from the toolbar, then select **Open
+	dashboard**. The dashboard contains the full history, tracked postings, site
+	trust decisions, application totals, and settings.
+
+If the popup or dashboard does not appear, return to the extensions page and
+make sure RoleEcho is enabled, the correct folder is loaded, and **Allow User
+Scripts** is on. After changing source files, select **Reload** on the RoleEcho
+card before testing again.
 
 ## How to use it
 
