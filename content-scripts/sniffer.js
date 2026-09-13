@@ -37,8 +37,17 @@ function isWorthChecking() {
   return URL_HINTS.test(location.href) || hasJobPostingJsonLd() || hasJobShapedContent();
 }
 
+function sendDetectionMessage() {
+  try {
+    const pending = chrome.runtime.sendMessage({ type: MSG_JOB_PAGE_DETECTED });
+    pending?.catch(() => {}); // Extension may have been reloaded while this page stayed open.
+  } catch (error) {
+    // An invalidated extension context cannot be repaired from a content script.
+  }
+}
+
 function reportJobPage() {
-  if (isWorthChecking()) chrome.runtime.sendMessage({ type: MSG_JOB_PAGE_DETECTED });
+  if (isWorthChecking()) sendDetectionMessage();
 }
 
 reportJobPage();

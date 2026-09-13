@@ -1,3 +1,7 @@
+(function initializeRoleEchoEngine() {
+if (globalThis.__ROLEECHO_ENGINE_INITIALIZED__) return;
+globalThis.__ROLEECHO_ENGINE_INITIALIZED__ = true;
+
 /**
  * FILE: content-scripts/engine.js
  * RoleEcho v1.3 — injected on demand by background.js,
@@ -86,6 +90,25 @@ const COMPANY_SELECTORS = [
   '[class*="employer" i]', '.posting-categories .department', 'h3'
 ];
 
+const LINKEDIN_TITLE_SELECTORS = [
+  '.job-details-jobs-unified-top-card__job-title',
+  '.jobs-unified-top-card__job-title',
+  '[class*="jobs-unified-top-card__job-title"]',
+  '[class*="job-details-jobs-unified-top-card__job-title"]',
+  '[class*="top-card"] h1',
+  'main h1'
+];
+
+const LINKEDIN_COMPANY_SELECTORS = [
+  '.job-details-jobs-unified-top-card__company-name',
+  '.jobs-unified-top-card__company-name',
+  '[class*="jobs-unified-top-card__company-name"]',
+  '[class*="job-details-jobs-unified-top-card__company-name"]',
+  '[class*="top-card"] a[href*="/company/"]',
+  'main a[href*="/company/"]',
+  'a[href*="/company/"]'
+];
+
 /* ---------------------------------------------------------------------
  * Shadow-DOM-aware DOM queries
  * ------------------------------------------------------------------- */
@@ -143,6 +166,34 @@ function extractFromMeta() {
   return null;
 }
 
+function firstVisibleText(selectors, minimumLength) {
+  for (const selector of selectors) {
+    const element = deepQueryAll(selector).find(candidate => {
+      const style = window.getComputedStyle(candidate);
+      return style.display !== 'none' && style.visibility !== 'hidden';
+    });
+    const text = element?.innerText?.replace(/\s+/g, ' ').trim();
+    if (text && text.length >= minimumLength) return text;
+  }
+  return '';
+}
+
+function isPlausibleLinkedInTitle(text) {
+  return text && text.length >= 3 &&
+    !/^(?:\d+\s+)?notifications?$|^(?:home|my network|messaging|search|jobs)$/i.test(text);
+}
+
+function extractFromLinkedIn() {
+  if (!/(^|\.)linkedin\.com$/i.test(location.hostname)) return null;
+  let title = firstVisibleText(LINKEDIN_TITLE_SELECTORS, 3);
+  if (!isPlausibleLinkedInTitle(title)) {
+    const pageTitle = document.title.split('|')[0].replace(/\s+/g, ' ').trim();
+    title = isPlausibleLinkedInTitle(pageTitle) ? pageTitle : '';
+  }
+  const company = firstVisibleText(LINKEDIN_COMPANY_SELECTORS, 2);
+  return title ? { title, company, source: 'dom' } : null;
+}
+
 function extractFromDom() {
   let title = '', company = '';
   for (const sel of TITLE_SELECTORS) {
@@ -157,7 +208,18 @@ function extractFromDom() {
 }
 
 function extractJobInfo() {
-  return extractFromJsonLd() || extractFromMeta() || extractFromDom();
+  const linkedIn = extractFromLinkedIn();
+  if (linkedIn?.title && linkedIn?.company) return linkedIn;
+
+  const structured = extractFromJsonLd();
+  if (structured && (!/(^|\.)linkedin\.com$/i.test(location.hostname) ||
+      isPlausibleLinkedInTitle(structured.title))) {
+    if (!structured.company && linkedIn?.company) structured.company = linkedIn.company;
+    if (!structured.title && linkedIn?.title) structured.title = linkedIn.title;
+    return structured;
+  }
+
+  return linkedIn || extractFromMeta() || extractFromDom();
 }
 
 /* ---------------------------------------------------------------------
@@ -544,3 +606,4 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 } else {
   window.addEventListener('DOMContentLoaded', init);
 }
+})();

@@ -10,6 +10,7 @@
  * globalThis.JDSMatching, instead.
  */
 
+(function initializeMatching() {
 const JDSMatching = (() => {
 
 const TITLE_ONLY_THRESHOLD = 0.85;
@@ -130,3 +131,4 @@ return {
 })();
 
 if (typeof globalThis !== 'undefined') globalThis.JDSMatching = JDSMatching;
+})();

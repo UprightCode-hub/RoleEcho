@@ -38,6 +38,9 @@ job-dedup-extension/
 │   ├── icon16.png, icon48.png, icon128.png   Real icons (not placeholders)
 ├── job-dedup-extension-CONTEXT.md  Full design history and decisions
 ├── README.md                       Human install/testing instructions
+├── tests/
+│   └── matching.test.js          Dependency-free tests for pure matching logic
+├── CHANGELOG.md                  Release history and known limitations
 └── LICENSE                         MIT — Wisdom Ekwugha
 ```
 

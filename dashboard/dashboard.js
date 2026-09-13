@@ -27,6 +27,7 @@ function formatDateShort(ts) {
 
 let dashboardData = null;
 let postingsSort = { key: 'timestamp', dir: 'desc' };
+let refreshInFlight = false;
 const TAB_IDS = ['overview', 'applications', 'activity', 'postings', 'trust', 'settings'];
 
 function activateTab(name) {
@@ -234,7 +235,7 @@ document.getElementById('toggle-ask-sites').addEventListener('change', event => 
 });
 
 document.getElementById('btn-clear').addEventListener('click', () => {
-  if (!confirm('Clear every tracked job posting, the activity log, and the muted list? This cannot be undone.')) return;
+  if (!confirm('Clear all tracked job postings, activity history, muted listings, application totals, and platform visit totals? This cannot be undone.')) return;
   chrome.runtime.sendMessage({ type: MSG_CLEAR_RECORDS }, () => {
     document.getElementById('settings-feedback').textContent = 'Cleared.';
     loadDashboard();
@@ -254,8 +255,46 @@ document.getElementById('btn-backup').addEventListener('click', () => {
   });
 });
 
+// Privacy & permissions — reopen the setup/onboarding guide as its own
+// tab. Dashboard is a normal extension page (same messaging/permissions
+// tier as popup.js/onboarding.js), so chrome.tabs is available directly.
+document.getElementById('btn-reopen-setup').addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/onboarding.html') });
+});
+
+// Privacy & permissions — on-demand probe of chrome.userScripts, same
+// try/catch approach onboarding.js's probeUserScriptsEnabled() uses
+// (getScripts() throws if the "Allow User Scripts" toggle is still off).
+document.getElementById('btn-check-permission').addEventListener('click', async () => {
+  const result = document.getElementById('check-permission-result');
+  result.className = 'check-result';
+  result.textContent = 'Checking…';
+  try {
+    await chrome.userScripts.getScripts();
+    result.className = 'check-result ok';
+    result.textContent = "User Scripts permission is enabled — RoleEcho's detector can run.";
+  } catch (err) {
+    console.debug('[RoleEcho] userScripts check failed:', err);
+    result.className = 'check-result no';
+    result.textContent = 'User Scripts permission is not enabled yet. Use "Reopen setup guide" for the steps.';
+  }
+});
+
+// About — version is read from the extension's own manifest rather than
+// hardcoded, so this line never drifts from manifest.json's "version".
+// Pure presentation: does not touch storage, detection, or counting.
+function renderAbout() {
+  const versionEl = document.getElementById('about-version');
+  if (!versionEl) return;
+  const manifest = chrome.runtime.getManifest();
+  versionEl.textContent = manifest.version;
+}
+
 function loadDashboard() {
+  if (refreshInFlight) return;
+  refreshInFlight = true;
   chrome.runtime.sendMessage({ type: MSG_GET_DASHBOARD_DATA }, response => {
+    refreshInFlight = false;
     if (!response) return;
     dashboardData = response;
     renderConsent(response.consent);
@@ -266,7 +305,17 @@ function loadDashboard() {
     renderPostings();
     renderTrust(response);
     renderSettings(response);
+    document.getElementById('refresh-status').textContent = `Updated ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
   });
 }
 
+document.getElementById('btn-refresh').addEventListener('click', loadDashboard);
+setInterval(() => {
+  if (!document.hidden) loadDashboard();
+}, 5000);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) loadDashboard();
+});
+
+renderAbout();
 loadDashboard();

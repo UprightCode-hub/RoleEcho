@@ -596,6 +596,65 @@ etc.) was left exactly as-is — this was a CSS-only pass across all three
 files; the existing JavaScript contracts remain compatible after the
 update-checker and onboarding pin-step additions.
 
+## v1.3 — dashboard Settings panel
+
+Documents the four cards in the Settings tab of `dashboard/dashboard.html`,
+all implemented in the current workspace. These follow directly from the
+dashboard scope decision above; listed here so future sessions don't need
+to re-read the HTML to know what is in place.
+
+**Privacy & permissions card** — static explanatory text (what the extension
+reads, that everything stays in Chrome local storage on this device, that
+content checks require consent, that detection also requires the "Allow User
+Scripts" permission) paired with two action buttons:
+- **Reopen setup guide** — `chrome.tabs.create()` to
+  `onboarding/onboarding.html`, producing the same tab the first-install
+  flow opens. Dashboard is a normal extension page so `chrome.tabs` is
+  available directly (no message routing required).
+- **Check User Scripts permission** — probes `chrome.userScripts.getScripts()`
+  in a try/catch (same approach `onboarding.js` uses) and renders an inline
+  pass/fail result in `#check-permission-result`. On failure, tells the user
+  to use "Reopen setup guide" for the steps rather than redirecting
+  automatically.
+
+**Clear-data confirmation wording** — the `btn-clear` `confirm()` dialog
+explicitly names all five categories that get wiped: tracked job postings,
+activity history, muted listings, application totals, and platform visit
+totals. Also states the action cannot be undone. The underlying
+`handleClearRecords()` in `background.js` already wiped all five storage
+keys; this only documents the new wording surfaced to the user.
+
+**About RoleEcho card** — four label-value rows, rendered at page-open time
+by `renderAbout()`:
+- *Version* — `chrome.runtime.getManifest().version`, not hardcoded;
+  stays in sync with `manifest.json` automatically. Never drifts on a
+  manual version bump.
+- *Repository* — links to `https://github.com/UprightCode-hub/RoleEcho`.
+- *License* — "MIT", links to the LICENSE file in the repository.
+- *Created by* — "Wisdom Ekwugha", links to
+  `https://www.linkedin.com/in/wisdom-ekwugha`.
+Followed by a one-line open-source note ("no account, subscription, or
+payment is required to use it"). `renderAbout()` is called once on load,
+outside the `loadDashboard()` refresh cycle — the manifest values never
+change at runtime so there is no reason to re-read them on every poll.
+
+**Support RoleEcho card** — optional donation section. Currently renders a
+`DONATION_LINK_PLACEHOLDER` anchor with a note that a real GitHub Sponsors,
+Ko-fi, or Buy Me a Coffee link will replace it once one exists. To activate:
+change only the `href` (and optionally the visible text) of the
+`#support-donation-link` anchor in `dashboard.html` — nothing else on the
+page needs to change. Consistent with the distribution decision: donations
+optional and never paywalled, no link published until one actually exists.
+
+**Build status:** all four cards are part of `dashboard/dashboard.html` and
+`dashboard/dashboard.js`, both already marked complete (v1.3.2/v1.3.3 in
+the section above). The `dashboard.js` rendering side — `renderSettings()`,
+`renderAbout()`, the clear-data confirm dialog, the clipboard backup handler,
+`btn-reopen-setup`, and `btn-check-permission` — was previously implicit in
+the dashboard.html checklist entry rather than called out explicitly; it is
+complete and syntax-checked. None of this has been verified in a live Chrome
+install; same testing constraint as the rest of the project applies.
+
 ## Historical note: v1.0.1 coverage fix
 At that stage, `manifest.json`'s `content_scripts.matches` was `<all_urls>`, with
 `sniffer.js` gating on a literal `"JobPosting"` substring inside JSON-LD

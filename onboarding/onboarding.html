@@ -233,6 +233,53 @@
   }
   .trust svg { flex-shrink: 0; }
 
+  /* ── First-launch product guide ──────────────────────────────── */
+  .how-it-works {
+    margin: 0 0 28px;
+    padding: 4px 18px;
+    background: var(--glass-dense);
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    backdrop-filter: blur(14px) saturate(1.25);
+    -webkit-backdrop-filter: blur(14px) saturate(1.25);
+  }
+  .how-it-works h2 {
+    padding: 18px 0 12px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .guide-row {
+    display: flex;
+    gap: 12px;
+    padding: 14px 0;
+    border-top: 1px solid var(--rule);
+    align-items: flex-start;
+  }
+  .guide-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    background: var(--amber-bg);
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .guide-row strong {
+    display: block;
+    color: var(--ink);
+    font-size: 13.5px;
+    margin-bottom: 2px;
+  }
+  .guide-row p {
+    color: var(--ink-soft);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
   /* ── Buttons ──────────────────────────────────────────────────── */
   .actions {
     display: flex;
@@ -437,11 +484,43 @@
 
   <!-- ── Screen 1: consent ──────────────────────────────────────── -->
   <section id="screen-consent">
-    <h1>One quick check</h1>
+    <h1>RoleEcho watches while you search</h1>
     <p class="lede">
-      To catch duplicate listings, this extension reads the job title and
-      company name off pages you visit — nothing else.
+      It quietly remembers job postings you visit and warns you when the
+      same opportunity appears again across different sites or tabs.
     </p>
+
+    <div class="how-it-works">
+      <h2>How it works</h2>
+      <div class="guide-row">
+        <div class="guide-icon">1</div>
+        <div>
+          <strong>Browse jobs normally</strong>
+          <p>RoleEcho reads the visible job title and company name from supported job pages.</p>
+        </div>
+      </div>
+      <div class="guide-row">
+        <div class="guide-icon">2</div>
+        <div>
+          <strong>Duplicates are flagged</strong>
+          <p>If a repost or agency copy matches a job you already saw, a small warning appears in the corner.</p>
+        </div>
+      </div>
+      <div class="guide-row">
+        <div class="guide-icon">3</div>
+        <div>
+          <strong>Applications are counted automatically</strong>
+          <p>LinkedIn Easy Apply is counted separately; applications that open an external form count as Advanced Apply.</p>
+        </div>
+      </div>
+      <div class="guide-row">
+        <div class="guide-icon">4</div>
+        <div>
+          <strong>Review everything from the dashboard</strong>
+          <p>See tracked postings, duplicate history, application totals, and trusted sites from the toolbar popup.</p>
+        </div>
+      </div>
+    </div>
 
     <div class="trust" role="note">
       <!-- Lock icon -->
