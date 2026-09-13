@@ -10,7 +10,7 @@ Built by **Wisdom Ekwugha**.
 
 Project: **RoleEcho**
 
-GitHub: repository link coming after initialization  
+GitHub: [UprightCode-hub/RoleEcho](https://github.com/UprightCode-hub/RoleEcho)  
 LinkedIn: [Wisdom Ekwugha](https://www.linkedin.com/in/wisdom-ekwugha)
 
 Status: v1.3 implementation. The extension includes duplicate detection,

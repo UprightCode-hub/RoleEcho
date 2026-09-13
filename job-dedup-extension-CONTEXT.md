@@ -148,8 +148,8 @@ MIT, open source. NOT published to the Chrome Web Store — distributed as
 source via "Load unpacked." Explicitly not a commercial product ever;
 donations welcome, never requested/paywalled. Attribution matters for
 portfolio/resume purposes — the project is authored by Wisdom Ekwugha.
-LinkedIn: `https://www.linkedin.com/in/wisdom-ekwugha`. The GitHub URL will
-be added after the repository is initialized.
+LinkedIn: `https://www.linkedin.com/in/wisdom-ekwugha`.
+GitHub: `https://github.com/UprightCode-hub/RoleEcho`.
 NOTE: user verbally floated, then explicitly walked back, an idea of maybe
 publishing to the Web Store later + adding donations once more polished.
 Not a decision — current plan (source-only, no Store) stands. Don't build
@@ -422,8 +422,8 @@ decided or being built, kept here only so they aren't lost:**
 
 ## v1.3 — application-count tracking, update checker, design pass
 Application counting, the design pass, and the update checker are implemented
-in the current workspace. The update checker remains disabled until the real
-GitHub repository owner and name replace its placeholders.
+in the current workspace. The update checker is connected to the live RoleEcho
+GitHub repository.
 This section supersedes the
 "counting total applications submitted" line in "Deferred to later" below
 for the specific, narrow feature described here — that Deferred item is
@@ -487,7 +487,7 @@ application's fate.
   storage, and exposes it through the existing popup/dashboard responses.
   Popup and dashboard render an update banner without downloading or
   replacing files. It is intentionally inactive while the repository
-  owner/name remain placeholders.
+  owner/name are configured as `UprightCode-hub` and `RoleEcho`.
 
 **Decision — time buckets, calendar-aligned with a lifetime total:**
 - Day resets at 12 AM local time.

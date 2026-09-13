@@ -63,9 +63,10 @@ is the easiest way to introduce a bug:
 - Author: Wisdom Ekwugha
 - Distribution: source-only, loaded unpacked in Chrome; not on the Chrome Web Store.
 - The dashboard and application-count wiring are present in this workspace.
-- The update checker is not implemented yet.
-- GitHub and LinkedIn URLs still need to be added when the final profile and
-  repository URLs are known.
+- The update checker is connected to the RoleEcho GitHub repository and is
+  throttled to periodic checks.
+- GitHub: `https://github.com/UprightCode-hub/RoleEcho`
+- LinkedIn: `https://www.linkedin.com/in/wisdom-ekwugha`
 - The extension has not yet been tested against a real "Load unpacked" install.
 - The onboarding "Open chrome://extensions" button's direct-navigation
   path hasn't been empirically confirmed to work in a live Chrome install
