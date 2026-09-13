@@ -58,8 +58,38 @@ function isKnownJobHost(url) {
   return KNOWN_JOB_HOSTS.some(host => hostname === host || hostname.endsWith('.' + host));
 }
 
+function isGoogleHost(hostname) {
+  return Boolean(hostname) &&
+    (hostname === 'google.com' || hostname.endsWith('.google.com'));
+}
+
+function isGoogleSearchUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return isGoogleHost(parsed.hostname) && parsed.pathname === '/search';
+  } catch {
+    return false;
+  }
+}
+
+function isGoogleRedirectUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return isGoogleHost(parsed.hostname) && parsed.pathname === '/url';
+  } catch {
+    return false;
+  }
+}
+
 function hostnameOf(url) {
   try { return new URL(url).hostname; } catch { return null; }
+}
+
+function sameSiteHost(firstHost, secondHost) {
+  if (!firstHost || !secondHost) return false;
+  return firstHost === secondHost ||
+    firstHost.endsWith('.' + secondHost) ||
+    secondHost.endsWith('.' + firstHost);
 }
 
 // v1.3 — tier-3 site trust list. Only ever written when a confirm popup
@@ -334,15 +364,16 @@ async function getApplicationStats() {
 }
 
 /* ---------------------------------------------------------------------
- * Pending applications — v1.3. When a genuinely new job posting is
- * recorded (handleCheckJob's non-duplicate branch), that tab is marked
- * "pending" here. Two things can resolve it, mutually exclusively:
+ * Pending applications — v1.3. When a job posting reaches the accepted
+ * detection path in handleCheckJob, that tab is marked "pending" here.
+ * This includes revisits to known or duplicate postings, because users
+ * can apply from any posting tab. Two things can resolve it, mutually exclusively:
  *  1. A child tab opens from it (chrome.tabs.onCreated, reusing the same
  *     openerTabId lineage the duplicate-suppression logic already
  *     tracks) — finalized as Advanced Apply, works for any site.
- *  2. engine.js sends APPLY_CONFIRMED from that same tab (LinkedIn Easy
- *     Apply modal reaching its "Application sent" state — engine.js
- *     detection not yet built) — finalized as Easy Apply.
+ *  2. engine.js sends APPLY_CONFIRMED from that same tab when the LinkedIn
+ *     Easy Apply modal reaches its "Application sent" state — finalized as
+ *     Easy Apply.
  * Whichever happens first wins and clears the pending entry, so a
  * posting is never counted twice. A posting that's viewed but never
  * acted on (no child tab, no confirmation) is never counted at all.
@@ -373,17 +404,29 @@ async function clearPendingApp(tabId) {
   await chrome.storage.session.set({ [PENDING_APPS_KEY]: map });
 }
 
-// Called from chrome.tabs.onCreated when the new tab's opener is pending.
-async function finalizeAdvancedApply(openerTabId) {
+// Called when a pending posting opens a child tab or navigates to an
+// external application site in the same tab.
+async function finalizeAdvancedApply(pendingTabId) {
   const map = await getPendingApps();
-  const pending = map[openerTabId];
+  const pending = map[pendingTabId];
   if (!pending) return;
   await recordApplication('advanced', pending.host);
-  delete map[openerTabId];
+  delete map[pendingTabId];
   await chrome.storage.session.set({ [PENDING_APPS_KEY]: map });
 }
 
-// Called on APPLY_CONFIRMED from engine.js (future work).
+async function finalizeAdvancedApplyOnNavigation(tabId, destinationUrl) {
+  const pending = (await getPendingApps())[tabId];
+  if (!pending) return false;
+
+  const destinationHost = hostnameOf(destinationUrl);
+  if (!destinationHost || sameSiteHost(destinationHost, pending.host)) return false;
+
+  await finalizeAdvancedApply(tabId);
+  return true;
+}
+
+// Called on APPLY_CONFIRMED from engine.js after a completed Easy Apply.
 async function handleApplyConfirmed(sender) {
   const tabId = sender?.tab?.id;
   if (typeof tabId !== 'number') return { ok: false };
@@ -558,6 +601,7 @@ async function handleCheckJob(payload, sender) {
       // but still worth showing "recorded" rather than leaving the badge
       // stuck on "watching" forever.
       await setTabState(tabId, 'recorded', { title: payload.title, company: payload.company });
+      await markPending(tabId, hostname);
       return { duplicate: false };
     }
     if (changedByPrune) await saveRecords(records);
@@ -578,6 +622,7 @@ async function handleCheckJob(payload, sender) {
       matchCompany: match.company
     });
     await bumpStat('duplicates');
+    await markPending(tabId, hostname);
     return {
       duplicate: true,
       match: {
@@ -607,7 +652,7 @@ async function handleCheckJob(payload, sender) {
   await setTabState(tabId, 'recorded', { title: payload.title, company: payload.company });
   await appendHistory({ type: 'recorded', title: payload.title, company: payload.company });
   await bumpStat('seen');
-  await markPending(tabId, hostname); // v1.3 — candidate for an application count, see finalizeAdvancedApply/handleApplyConfirmed
+  await markPending(tabId, hostname);
   return { duplicate: false };
 }
 
@@ -888,21 +933,31 @@ chrome.runtime.onUserScriptMessage.addListener((message, sender, sendResponse) =
   }
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'loading' && changeInfo.url) {
     clearInjectedFlag(tabId);
     clearTabState(tabId); // new page — old status/badge no longer applies
-    clearPendingApp(tabId); // navigated away without applying — don't count it
+    const countedAsAdvanced = await finalizeAdvancedApplyOnNavigation(tabId, changeInfo.url);
+    const pending = (await getPendingApps())[tabId];
+    const destinationHost = hostnameOf(changeInfo.url);
+    const isGoogleRedirect = pending && isGoogleHost(pending.host) &&
+      sameSiteHost(destinationHost, pending.host) && isGoogleRedirectUrl(changeInfo.url);
+    if (!countedAsAdvanced && !isGoogleRedirect) {
+      clearPendingApp(tabId); // same-site navigation or abandonment
+    }
   }
   if (changeInfo.status === 'complete' && tab.url && isKnownJobHost(tab.url)) {
     injectEngine(tabId);
+  }
+  if (changeInfo.status === 'complete' && tab.url && isGoogleSearchUrl(tab.url)) {
+    markPending(tabId, hostnameOf(tab.url));
   }
 });
 
 chrome.tabs.onCreated.addListener((tab) => {
   if (tab.openerTabId != null) {
     recordOpener(tab.id, tab.openerTabId);
-    finalizeAdvancedApply(tab.openerTabId); // v1.3 — see note above handleApplyConfirmed
+    finalizeAdvancedApply(tab.openerTabId);
   }
 });
 
