@@ -1,5 +1,7 @@
 # RoleEcho
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-red.svg)](LICENSE-APACHE-2.0)
+
 RoleEcho is a privacy-first Chrome extension for high-volume job searching.
 It remembers the job postings you visit and warns you when a repost, agency
 mirror, or slightly reworded listing is one you have already seen.
@@ -7,6 +9,12 @@ mirror, or slightly reworded listing is one you have already seen.
 It is built by [Wisdom Ekwugha](https://www.linkedin.com/in/wisdom-ekwugha).
 
 [GitHub repository](https://github.com/UprightCode-hub/RoleEcho) | [Project issues](https://github.com/UprightCode-hub/RoleEcho/issues)
+
+> **RoleEcho is dual-licensed under the MIT License or Apache License 2.0.**
+> You may choose either license when using, copying, modifying, publishing,
+> distributing, sublicensing, or selling the software. See [`LICENSE`](LICENSE)
+> and [`LICENSE-APACHE-2.0`](LICENSE-APACHE-2.0) for the complete terms. There
+> are no paid license fees or restrictions on commercial use.
 
 ## Why it exists
 
@@ -97,4 +105,5 @@ use the extension.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+**RoleEcho is dual-licensed under MIT or Apache-2.0.** Choose the license that
+fits your use: [MIT](LICENSE) or [Apache License 2.0](LICENSE-APACHE-2.0).
