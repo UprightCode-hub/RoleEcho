@@ -2,6 +2,7 @@ importScripts('content-scripts/matching.js');
 
 const MSG_JOB_PAGE_DETECTED = 'JOB_PAGE_DETECTED';
 const MSG_CHECK_JOB = 'CHECK_JOB';
+const MSG_APPLY_INTENT = 'APPLY_INTENT';
 const MSG_CLOSE_TAB = 'CLOSE_TAB';
 const MSG_MUTE_MATCH = 'MUTE_MATCH';
 const MSG_SET_SITE_TRUST = 'SET_SITE_TRUST'; // v1.3 — engine.js's tier-3 confirm popup answer
@@ -34,6 +35,7 @@ const PENDING_APPS_KEY = 'jds_pending_apps';   // storage.session — tabId -> {
 const RECORD_TTL_MS = 60 * 24 * 60 * 60 * 1000; // 60 days
 const MAX_OPENER_CHAIN_HOPS = 20; // guard against any cyclical/bad data
 const MAX_HISTORY_ENTRIES = 20;   // popup only ever shows the last few of these
+const PENDING_APPLY_TTL_MS = 2 * 60 * 60 * 1000;
 
 // Named ATS/job-board domains from the original userscript's @match list.
 // Perf shortcut only (decision #2) — never a gate.
@@ -58,38 +60,8 @@ function isKnownJobHost(url) {
   return KNOWN_JOB_HOSTS.some(host => hostname === host || hostname.endsWith('.' + host));
 }
 
-function isGoogleHost(hostname) {
-  return Boolean(hostname) &&
-    (hostname === 'google.com' || hostname.endsWith('.google.com'));
-}
-
-function isGoogleSearchUrl(url) {
-  try {
-    const parsed = new URL(url);
-    return isGoogleHost(parsed.hostname) && parsed.pathname === '/search';
-  } catch {
-    return false;
-  }
-}
-
-function isGoogleRedirectUrl(url) {
-  try {
-    const parsed = new URL(url);
-    return isGoogleHost(parsed.hostname) && parsed.pathname === '/url';
-  } catch {
-    return false;
-  }
-}
-
 function hostnameOf(url) {
   try { return new URL(url).hostname; } catch { return null; }
-}
-
-function sameSiteHost(firstHost, secondHost) {
-  if (!firstHost || !secondHost) return false;
-  return firstHost === secondHost ||
-    firstHost.endsWith('.' + secondHost) ||
-    secondHost.endsWith('.' + firstHost);
 }
 
 // v1.3 — tier-3 site trust list. Only ever written when a confirm popup
@@ -364,26 +336,19 @@ async function getApplicationStats() {
 }
 
 /* ---------------------------------------------------------------------
- * Pending applications — v1.3. When a job posting reaches the accepted
- * detection path in handleCheckJob, that tab is marked "pending" here.
- * This includes revisits to known or duplicate postings, because users
- * can apply from any posting tab. Two things can resolve it, mutually exclusively:
+ * Pending applications — v1.3. A posting tab is marked "pending" only
+ * after engine.js observes an apply-shaped click. Two things can resolve it,
+ * mutually exclusively:
  *  1. A child tab opens from it (chrome.tabs.onCreated, reusing the same
  *     openerTabId lineage the duplicate-suppression logic already
  *     tracks) — finalized as Advanced Apply, works for any site.
  *  2. engine.js sends APPLY_CONFIRMED from that same tab when the LinkedIn
  *     Easy Apply modal reaches its "Application sent" state — finalized as
  *     Easy Apply.
- * Whichever happens first wins and clears the pending entry, so a
- * posting is never counted twice. A posting that's viewed but never
- * acted on (no child tab, no confirmation) is never counted at all.
- * KNOWN v1.3 GAP, accepted not blocking (same spirit as the existing
- * "third-party Apply popups" gap in CONTEXT.md): ANY child tab opened
- * from a pending posting tab counts as an apply, not just one opened by
- * clicking something apply-shaped — e.g. clicking a "similar jobs" or
- * company-profile link from that tab would also be misread as an
- * Advanced Apply. Distinguishing the click target would need engine.js
- * to watch the actual click, not just the resulting tab.
+ * Whichever happens first wins and clears the pending entry, so a posting
+ * is never counted twice. The explicit click-intent gate prevents ordinary
+ * browsing from being counted as an Advanced Apply while supporting
+ * external ATS and employer sites.
  * ------------------------------------------------------------------- */
 async function getPendingApps() {
   const { [PENDING_APPS_KEY]: map } = await chrome.storage.session.get(PENDING_APPS_KEY);
@@ -393,7 +358,7 @@ async function getPendingApps() {
 async function markPending(tabId, host) {
   if (typeof tabId !== 'number') return;
   const map = await getPendingApps();
-  map[tabId] = { host };
+  map[tabId] = { host, startedAt: Date.now() };
   await chrome.storage.session.set({ [PENDING_APPS_KEY]: map });
 }
 
@@ -410,6 +375,11 @@ async function finalizeAdvancedApply(pendingTabId) {
   const map = await getPendingApps();
   const pending = map[pendingTabId];
   if (!pending) return;
+  if (!pending.startedAt || Date.now() - pending.startedAt > PENDING_APPLY_TTL_MS) {
+    delete map[pendingTabId];
+    await chrome.storage.session.set({ [PENDING_APPS_KEY]: map });
+    return;
+  }
   await recordApplication('advanced', pending.host);
   delete map[pendingTabId];
   await chrome.storage.session.set({ [PENDING_APPS_KEY]: map });
@@ -420,7 +390,7 @@ async function finalizeAdvancedApplyOnNavigation(tabId, destinationUrl) {
   if (!pending) return false;
 
   const destinationHost = hostnameOf(destinationUrl);
-  if (!destinationHost || sameSiteHost(destinationHost, pending.host)) return false;
+  if (!destinationHost) return false;
 
   await finalizeAdvancedApply(tabId);
   return true;
@@ -433,9 +403,23 @@ async function handleApplyConfirmed(sender) {
   const map = await getPendingApps();
   const pending = map[tabId];
   if (!pending) return { ok: false }; // already resolved as advanced, or was never marked
+  if (!pending.startedAt || Date.now() - pending.startedAt > PENDING_APPLY_TTL_MS) {
+    delete map[tabId];
+    await chrome.storage.session.set({ [PENDING_APPS_KEY]: map });
+    return { ok: false };
+  }
   await recordApplication('easy', pending.host);
   delete map[tabId];
   await chrome.storage.session.set({ [PENDING_APPS_KEY]: map });
+  return { ok: true };
+}
+
+async function handleApplyIntent(sender) {
+  const tabId = sender?.tab?.id;
+  if (typeof tabId !== 'number') return { ok: false };
+  const host = hostnameOf(sender.tab.url);
+  if (!host) return { ok: false };
+  await markPending(tabId, host);
   return { ok: true };
 }
 
@@ -601,7 +585,6 @@ async function handleCheckJob(payload, sender) {
       // but still worth showing "recorded" rather than leaving the badge
       // stuck on "watching" forever.
       await setTabState(tabId, 'recorded', { title: payload.title, company: payload.company });
-      await markPending(tabId, hostname);
       return { duplicate: false };
     }
     if (changedByPrune) await saveRecords(records);
@@ -622,7 +605,6 @@ async function handleCheckJob(payload, sender) {
       matchCompany: match.company
     });
     await bumpStat('duplicates');
-    await markPending(tabId, hostname);
     return {
       duplicate: true,
       match: {
@@ -652,7 +634,6 @@ async function handleCheckJob(payload, sender) {
   await setTabState(tabId, 'recorded', { title: payload.title, company: payload.company });
   await appendHistory({ type: 'recorded', title: payload.title, company: payload.company });
   await bumpStat('seen');
-  await markPending(tabId, hostname);
   return { duplicate: false };
 }
 
@@ -928,6 +909,10 @@ chrome.runtime.onUserScriptMessage.addListener((message, sender, sendResponse) =
     handleApplyConfirmed(sender).then(sendResponse);
     return true;
   }
+  if (message?.type === MSG_APPLY_INTENT) {
+    handleApplyIntent(sender).then(sendResponse);
+    return true;
+  }
   if (message?.type === MSG_CLOSE_TAB && sender.tab?.id != null) {
     chrome.tabs.remove(sender.tab.id);
   }
@@ -938,19 +923,12 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     clearInjectedFlag(tabId);
     clearTabState(tabId); // new page — old status/badge no longer applies
     const countedAsAdvanced = await finalizeAdvancedApplyOnNavigation(tabId, changeInfo.url);
-    const pending = (await getPendingApps())[tabId];
-    const destinationHost = hostnameOf(changeInfo.url);
-    const isGoogleRedirect = pending && isGoogleHost(pending.host) &&
-      sameSiteHost(destinationHost, pending.host) && isGoogleRedirectUrl(changeInfo.url);
-    if (!countedAsAdvanced && !isGoogleRedirect) {
-      clearPendingApp(tabId); // same-site navigation or abandonment
+    if (!countedAsAdvanced) {
+      clearPendingApp(tabId); // navigation without a valid application candidate
     }
   }
   if (changeInfo.status === 'complete' && tab.url && isKnownJobHost(tab.url)) {
     injectEngine(tabId);
-  }
-  if (changeInfo.status === 'complete' && tab.url && isGoogleSearchUrl(tab.url)) {
-    markPending(tabId, hostnameOf(tab.url));
   }
 });
 

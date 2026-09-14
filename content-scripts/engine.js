@@ -69,6 +69,7 @@ globalThis.__ROLEECHO_ENGINE_INITIALIZED__ = true;
  */
 
 const MSG_CHECK_JOB       = 'CHECK_JOB';
+const MSG_APPLY_INTENT    = 'APPLY_INTENT';
 const MSG_CLOSE_TAB       = 'CLOSE_TAB';
 const MSG_MUTE_MATCH      = 'MUTE_MATCH';      // v1.2.0
 const MSG_SET_SITE_TRUST  = 'SET_SITE_TRUST';  // v1.3.0
@@ -245,7 +246,33 @@ const EASY_APPLY_OPEN_HINT_RE = /easy apply|apply to /i;
 const EASY_APPLY_SUCCESS_RE =
   /application (was |has been )?sent|application submitted|your application was sent/i;
 
+const APPLY_CONTROL_RE = /\b(apply|submit application|start application|continue application)\b/i;
+const APPLY_CONTROL_SELECTOR = [
+  'a', 'button', '[role="button"]', 'input[type="submit"]', 'input[type="button"]',
+  '[aria-label*="apply" i]', '[data-testid*="apply" i]', '[data-control-name*="apply" i]'
+].join(', ');
+
 let easyApplyConfirmedForThisPage = false;
+
+function getApplyControl(event) {
+  const path = typeof event.composedPath === 'function' ? event.composedPath() : [event.target];
+  return path.find(node => {
+    if (!(node instanceof Element) || !node.matches(APPLY_CONTROL_SELECTOR)) return false;
+    const label = [
+      node.innerText,
+      node.getAttribute('aria-label'),
+      node.getAttribute('title'),
+      node.getAttribute('data-control-name'),
+      node.value
+    ].filter(Boolean).join(' ');
+    return APPLY_CONTROL_RE.test(label);
+  }) || null;
+}
+
+function reportApplyIntent(event) {
+  if (!getApplyControl(event)) return;
+  chrome.runtime.sendMessage({ type: MSG_APPLY_INTENT }).catch(() => {});
+}
 
 // Individual job-posting page only — deliberately excludes the feed and
 // the search-results page (job details shown in a side panel there,
@@ -574,6 +601,7 @@ const debouncedRun = debounce(runDetection, SCAN_DEBOUNCE_MS);
 function init() {
   debouncedRun();
   checkEasyApplySuccess();
+  document.addEventListener('click', reportApplyIntent, true);
 
   // Same observer drives both the duplicate check and Easy Apply
   // detection — checkEasyApplySuccess() is a no-op in one line unless
