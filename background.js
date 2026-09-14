@@ -462,7 +462,7 @@ async function injectEngine(tabId) {
     await chrome.storage.session.set({ [INJECTED_TABS_KEY]: injected });
   } catch (err) {
     // Most likely cause: the user hasn't flipped "Allow User Scripts" yet.
-    console.warn('[RoleEcho] engine injection failed:', err);
+    console.warn('[SeenDisJob] engine injection failed:', err);
     await setTabState(tabId, 'idle', { reason: 'injection-failed' });
   } finally {
     injectionInFlight.delete(tabId);
@@ -473,7 +473,7 @@ async function configureUserScriptWorld() {
   try {
     await chrome.userScripts.configureWorld({ messaging: true });
   } catch (err) {
-    console.warn('[RoleEcho] userScripts world not available yet:', err);
+    console.warn('[SeenDisJob] userScripts world not available yet:', err);
   }
 }
 
@@ -731,7 +731,7 @@ async function handleSetAskAboutSites(enabled) {
  * result so popup/dashboard can show a banner without either one
  * triggering its own network request on every open.
  *
- * The repository is now hosted at github.com/UprightCode-hub/RoleEcho.
+ * The repository is now hosted at github.com/UprightCode-hub/SeenDisJob.
  * Keep the owner/name constants together so a future repository move only
  * requires changing these two values.
  *
@@ -743,7 +743,7 @@ async function handleSetAskAboutSites(enabled) {
  * for the person to update manually.
  * ------------------------------------------------------------------- */
 const UPDATE_REPO_OWNER = 'UprightCode-hub';
-const UPDATE_REPO_NAME = 'RoleEcho';
+const UPDATE_REPO_NAME = 'SeenDisJob';
 const UPDATE_MANIFEST_URL = `https://raw.githubusercontent.com/${UPDATE_REPO_OWNER}/${UPDATE_REPO_NAME}/main/manifest.json`;
 const UPDATE_REPO_RELEASES_URL = `https://github.com/${UPDATE_REPO_OWNER}/${UPDATE_REPO_NAME}/releases`;
 const UPDATE_CHECK_KEY = 'jds_update_check'; // storage.local — { lastChecked, remoteVersion, updateAvailable, error }
@@ -823,7 +823,7 @@ async function checkForUpdate() {
     // here and are swallowed rather than shown to the user. Keep the
     // last known-good status rather than flipping updateAvailable to
     // false on what may be a purely transient failure.
-    console.debug('[RoleEcho] update check failed (non-fatal):', err);
+    console.debug('[SeenDisJob] update check failed (non-fatal):', err);
     status = { ...cached, lastChecked: now, error: 'check-failed' };
   }
 

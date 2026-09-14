@@ -1,6 +1,6 @@
 /**
  * FILE: content-scripts/matching.js
- * RoleEcho v1.3 — ported from the original Tampermonkey
+ * SeenDisJob v1.3 — ported from the original Tampermonkey
  * userscript. Pure functions only — no Chrome APIs, no DOM, no storage.
  *
  * Loaded as a plain classic script (NOT an ES module) in two different

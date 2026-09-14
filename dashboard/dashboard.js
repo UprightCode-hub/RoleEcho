@@ -67,8 +67,8 @@ function renderUpdateBanner(status) {
   }
   banner.style.display = 'block';
   const text = status.remoteVersion
-    ? `RoleEcho ${escapeHtml(status.remoteVersion)} is available.`
-    : 'A newer version of RoleEcho is available.';
+    ? `SeenDisJob ${escapeHtml(status.remoteVersion)} is available.`
+    : 'A newer version of SeenDisJob is available.';
   banner.innerHTML = `${text} <a href="${escapeHtml(status.repoUrl)}" target="_blank" rel="noopener">View on GitHub</a>`;
 }
 
@@ -250,7 +250,7 @@ document.getElementById('btn-backup').addEventListener('click', () => {
       feedback.textContent = 'Backup JSON copied to clipboard.';
     } catch (error) {
       feedback.textContent = 'Could not access the clipboard.';
-      console.warn('[RoleEcho] clipboard write failed:', error);
+      console.warn('[SeenDisJob] clipboard write failed:', error);
     }
   });
 });
@@ -272,9 +272,9 @@ document.getElementById('btn-check-permission').addEventListener('click', async 
   try {
     await chrome.userScripts.getScripts();
     result.className = 'check-result ok';
-    result.textContent = "User Scripts permission is enabled — RoleEcho's detector can run.";
+    result.textContent = "User Scripts permission is enabled — SeenDisJob's detector can run.";
   } catch (err) {
-    console.debug('[RoleEcho] userScripts check failed:', err);
+    console.debug('[SeenDisJob] userScripts check failed:', err);
     result.className = 'check-result no';
     result.textContent = 'User Scripts permission is not enabled yet. Use "Reopen setup guide" for the steps.';
   }

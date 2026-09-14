@@ -66,8 +66,8 @@ function renderUpdateBanner(status) {
   }
   banner.style.display = 'block';
   const text = status.remoteVersion
-    ? `RoleEcho ${escapeHtml(status.remoteVersion)} is available.`
-    : 'A newer version of RoleEcho is available.';
+    ? `SeenDisJob ${escapeHtml(status.remoteVersion)} is available.`
+    : 'A newer version of SeenDisJob is available.';
   banner.innerHTML = `${text} <a href="${escapeHtml(status.repoUrl)}" target="_blank" rel="noopener">View on GitHub</a>`;
 }
 
@@ -204,7 +204,7 @@ document.getElementById('btn-backup').addEventListener('click', () => {
       actionFeedback.textContent = 'Backup JSON copied to clipboard.';
     } catch (err) {
       actionFeedback.textContent = 'Could not access the clipboard.';
-      console.warn('[RoleEcho] clipboard write failed:', err);
+      console.warn('[SeenDisJob] clipboard write failed:', err);
     }
   });
 });

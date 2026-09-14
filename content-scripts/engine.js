@@ -1,10 +1,10 @@
-(function initializeRoleEchoEngine() {
-if (globalThis.__ROLEECHO_ENGINE_INITIALIZED__) return;
-globalThis.__ROLEECHO_ENGINE_INITIALIZED__ = true;
+(function initializeSeenDisJobEngine() {
+if (globalThis.__SEENDISJOB_ENGINE_INITIALIZED__) return;
+globalThis.__SEENDISJOB_ENGINE_INITIALIZED__ = true;
 
 /**
  * FILE: content-scripts/engine.js
- * RoleEcho v1.3 — injected on demand by background.js,
+ * SeenDisJob v1.3 — injected on demand by background.js,
  * once it has decided this tab is a genuine job-posting page.
  *
  * v1.2.0 UX changes (cosmetic only — no logic changes):
@@ -513,7 +513,7 @@ function showSiteConfirmPopup(hostname) {
     <div class="jds-c-title">Is this a job site?</div>
     <div class="jds-c-body">
       This page looks like it might be a job posting on <b>${escapeHtml(hostname)}</b>.
-      Say yes to have RoleEcho watch this site for duplicates.
+      Say yes to have SeenDisJob watch this site for duplicates.
     </div>
     <div class="jds-c-actions">
       <button class="jds-c-yes">Yes, watch this site</button>
@@ -588,7 +588,7 @@ async function runDetection() {
       showDuplicateHud(response.match, info.title, info.company);
     }
   } catch (err) {
-    console.warn('[RoleEcho] scan error:', err);
+    console.warn('[SeenDisJob] scan error:', err);
   }
 }
 

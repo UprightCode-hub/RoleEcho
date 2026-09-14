@@ -1,11 +1,11 @@
-# Project Structure — RoleEcho (Chrome Extension)
+# Project Structure — SeenDisJob (Chrome Extension)
 
 This file is a contributor-facing map of the repository. The public product overview lives in the root README, while the deeper implementation history and engineering notes live in the `docs/` folder.
 
-RoleEcho is currently a source-only Chromium extension. Live Chrome testing is still required because the extension depends on `chrome.userScripts` and the browser must allow that permission for the detector to work.
+SeenDisJob is currently a source-only Chromium extension. Live Chrome testing is still required because the extension depends on `chrome.userScripts` and the browser must allow that permission for the detector to work.
 
 ```
-RoleEcho/
+SeenDisJob/
 ├── background.js                 Service worker — owns storage, duplicate decisions,
 │                                tab lineage, recent activity, application totals,
 │                                and extension messaging.
@@ -23,7 +23,7 @@ RoleEcho/
 │   └── dashboard.js              Dashboard logic and data rendering.
 ├── docs/
 │   ├── PROJECT_STRUCTURE.md      This file.
-│   └── ROLEECHO_CONTEXT.md       Internal design and implementation history.
+│   └── SEENDISJOB_CONTEXT.md       Internal design and implementation history.
 ├── icons/
 │   ├── icon16.png
 │   ├── icon48.png
@@ -64,7 +64,7 @@ There are several Chrome execution contexts in play, and mixing them up is the e
 - Distribution: source-only; installed as an unpacked extension in Chrome
 - Not currently published to the Chrome Web Store
 - Includes popup status, recent history, dashboard summaries, and application counting
-- Repository: `https://github.com/UprightCode-hub/RoleEcho`
+- Repository: `https://github.com/UprightCode-hub/SeenDisJob`
 - LinkedIn: `https://www.linkedin.com/in/wisdom-ekwugha`
 - Real browser testing is still required because the extension depends on Chrome’s `chrome.userScripts` permission
 - Some edge cases remain, especially around third-party Apply flows or external sites whose tab lineage is incomplete
@@ -72,6 +72,6 @@ There are several Chrome execution contexts in play, and mixing them up is the e
 ## Notes for contributors
 
 - The public-facing README is intentionally user-oriented and concise.
-- The implementation notes and decision history live in `docs/ROLEECHO_CONTEXT.md`.
+- The implementation notes and decision history live in `docs/SEENDISJOB_CONTEXT.md`.
 - The matching logic is deliberately kept pure and testable in `content-scripts/matching.js`.
 - The extension’s main value proposition is local duplicate detection for job seekers, not a general-purpose job tracker.

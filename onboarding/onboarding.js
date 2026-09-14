@@ -13,7 +13,7 @@
  */
 
 const CONSENT_KEY = 'jds_consent_granted'; // must match background.js exactly
-const LOG_PREFIX = '[RoleEcho]'; // matches background.js/engine.js's own warn prefix
+const LOG_PREFIX = '[SeenDisJob]'; // matches background.js/engine.js's own warn prefix
 
 const screenConsent = document.getElementById('screen-consent');
 const screenDeclined = document.getElementById('screen-declined');
@@ -67,7 +67,7 @@ function renderGuideSteps() {
   ];
   if (showSeparateToggle) {
     steps.push(
-      `Find <b>RoleEcho</b> in the list, click <b>Details</b>,
+      `Find <b>SeenDisJob</b> in the list, click <b>Details</b>,
        and turn on <b>Allow User Scripts</b>. This is a separate switch
        Chrome added in version 138 specifically for this API — Developer
        mode alone isn't enough anymore on your version.`

@@ -1,4 +1,4 @@
-# RoleEcho — Chrome Extension — Handoff v2
+# SeenDisJob — Chrome Extension — Handoff v2
 
 This file is internal project context for contributors and maintainers. It documents the engineering decisions and design history behind the current implementation. It is not intended to be the public-facing product description.
 
@@ -9,7 +9,7 @@ Python developer, <2yrs pro experience. Reads JS fine, can't confidently write i
 During high-volume job search (30+ tabs normal), same job posting often reappears (repost, staffing-agency mirror, new req code). Tool silently warns when the current tab is a duplicate of one already seen. Single purpose only — NOT a userscript-manager, NOT a job-tracker/CRM (manual application-stage tracking is still explicitly rejected, see original reasoning below). UPDATE: a dashboard showing the tool's own passive data (jobs seen, duplicates caught, site trust list) is implemented — see the v1.3 section. This is narrower than the job-tracker concept that was rejected: no manual status/notes/stages, just a fuller view of data the tool already collects. The job-tracker/CRM rejection itself still stands.
 
 ## Reference implementation
-Original Tampermonkey userscript "RoleEcho" v2.5 (~500 lines,
+Original Tampermonkey userscript "SeenDisJob" v2.5 (~500 lines,
 full source has been read in full by the assistant). Its logic (extraction,
 normalization, fuzzy matching) is the source of truth for that layer and
 has already been ported almost verbatim into `content-scripts/matching.js`.
@@ -74,7 +74,7 @@ has already been ported almost verbatim into `content-scripts/matching.js`.
 MIT, open source. NOT published to the Chrome Web Store — distributed as
 source via "Load unpacked." Explicitly not a commercial product ever.
 Attribution matters for portfolio/resume purposes — the project is authored by
-Wisdom Ekwugha. GitHub: `https://github.com/UprightCode-hub/RoleEcho`.
+Wisdom Ekwugha. GitHub: `https://github.com/UprightCode-hub/SeenDisJob`.
 LinkedIn: `https://www.linkedin.com/in/wisdom-ekwugha`.
 
 ## Deferred to later

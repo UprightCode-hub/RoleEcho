@@ -1,6 +1,6 @@
 /**
  * FILE: content-scripts/sniffer.js
- * RoleEcho — runs on all ordinary web pages, but only signals
+ * SeenDisJob — runs on all ordinary web pages, but only signals
  * background.js when a page has a cheap job-shaped clue. Named job hosts
  * bypass this script through background.js's fast path.
  *
