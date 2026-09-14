@@ -231,7 +231,8 @@ function extractJobInfo() {
 const LINKEDIN_EASY_APPLY_MODAL_SELECTORS = [
   '.jobs-easy-apply-modal',
   '[data-test-modal-id="easy-apply-modal"]',
-  '.artdeco-modal[role="dialog"]' // fallback — filtered by text below
+  '.artdeco-modal[role="dialog"]',
+  '[role="dialog"]' // LinkedIn changes the modal class; text filtering below keeps this scoped
 ];
 
 // Confirms a generic artdeco-modal match is really the Easy Apply flow
@@ -256,13 +257,13 @@ function isLinkedInJobPostingPage() {
 
 function findEasyApplyModal() {
   for (const sel of LINKEDIN_EASY_APPLY_MODAL_SELECTORS) {
-    const el = document.querySelector(sel);
-    if (!el) continue;
-    if (sel === '.artdeco-modal[role="dialog"]' &&
-        !EASY_APPLY_OPEN_HINT_RE.test(el.textContent || '')) {
-      continue; // generic modal that isn't an Easy Apply one — skip it
+    const candidates = document.querySelectorAll(sel);
+    for (const el of candidates) {
+      if (!EASY_APPLY_OPEN_HINT_RE.test(el.textContent || '')) {
+        continue; // Ignore unrelated LinkedIn dialogs and overlays.
+      }
+      return el;
     }
-    return el;
   }
   return null;
 }
