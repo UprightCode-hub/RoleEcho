@@ -31,6 +31,7 @@ const INJECTED_TABS_KEY = 'jds_injected_tabs'; // storage.session
 const OPENER_MAP_KEY = 'jds_tab_openers';      // storage.session
 const TAB_STATE_KEY = 'jds_tab_state';         // storage.session — powers badge + popup
 const PENDING_APPS_KEY = 'jds_pending_apps';   // storage.session — tabId -> { host }, see note below
+const APPLICATION_FLOW_TABS_KEY = 'jds_application_flow_tabs'; // storage.session — tabs opened/navigated by an explicit Apply action
 
 const RECORD_TTL_MS = 60 * 24 * 60 * 60 * 1000; // 60 days
 const MAX_OPENER_CHAIN_HOPS = 20; // guard against any cyclical/bad data
@@ -369,6 +370,50 @@ async function clearPendingApp(tabId) {
   await chrome.storage.session.set({ [PENDING_APPS_KEY]: map });
 }
 
+async function getApplicationFlowTabs() {
+  const { [APPLICATION_FLOW_TABS_KEY]: map } = await chrome.storage.session.get(APPLICATION_FLOW_TABS_KEY);
+  return map || {};
+}
+
+async function markApplicationFlowTab(tabId, awaitingInitialNavigation) {
+  if (typeof tabId !== 'number') return;
+  const map = await getApplicationFlowTabs();
+  map[tabId] = { startedAt: Date.now(), awaitingInitialNavigation: awaitingInitialNavigation === true };
+  await chrome.storage.session.set({ [APPLICATION_FLOW_TABS_KEY]: map });
+}
+
+async function isApplicationFlowTab(tabId) {
+  const map = await getApplicationFlowTabs();
+  const entry = map[tabId];
+  if (!entry) return false;
+  if (!entry.startedAt || Date.now() - entry.startedAt > PENDING_APPLY_TTL_MS) {
+    delete map[tabId];
+    await chrome.storage.session.set({ [APPLICATION_FLOW_TABS_KEY]: map });
+    return false;
+  }
+  return true;
+}
+
+async function advanceApplicationFlowTab(tabId) {
+  const map = await getApplicationFlowTabs();
+  const entry = map[tabId];
+  if (!entry) return;
+  if (entry.awaitingInitialNavigation) {
+    entry.awaitingInitialNavigation = false;
+    await chrome.storage.session.set({ [APPLICATION_FLOW_TABS_KEY]: map });
+    return;
+  }
+  delete map[tabId];
+  await chrome.storage.session.set({ [APPLICATION_FLOW_TABS_KEY]: map });
+}
+
+async function clearApplicationFlowTab(tabId) {
+  const map = await getApplicationFlowTabs();
+  if (!(tabId in map)) return;
+  delete map[tabId];
+  await chrome.storage.session.set({ [APPLICATION_FLOW_TABS_KEY]: map });
+}
+
 // Called when a pending posting opens a child tab or navigates to an
 // external application site in the same tab.
 async function finalizeAdvancedApply(pendingTabId) {
@@ -554,6 +599,8 @@ async function isSameLineage(matchTabId, currentTabId) {
 async function handleCheckJob(payload, sender) {
   const tabId = sender?.tab?.id;
   if (typeof tabId !== 'number') return { duplicate: false };
+
+  if (await isApplicationFlowTab(tabId)) return { duplicate: false, applicationFlow: true };
 
   // v1.3 — tier-3 gate. Tier 1 (payload.source === 'jsonld') and tier 2
   // (KNOWN_JOB_HOSTS) are trusted by default and skip straight to
@@ -922,8 +969,12 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.status === 'loading' && changeInfo.url) {
     clearInjectedFlag(tabId);
     clearTabState(tabId); // new page — old status/badge no longer applies
-    const countedAsAdvanced = await finalizeAdvancedApplyOnNavigation(tabId, changeInfo.url);
-    if (!countedAsAdvanced) {
+    const pending = (await getPendingApps())[tabId];
+    if (pending) {
+      await markApplicationFlowTab(tabId, false);
+      await finalizeAdvancedApplyOnNavigation(tabId, changeInfo.url);
+    } else {
+      await advanceApplicationFlowTab(tabId);
       clearPendingApp(tabId); // navigation without a valid application candidate
     }
   }
@@ -935,7 +986,11 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 chrome.tabs.onCreated.addListener((tab) => {
   if (tab.openerTabId != null) {
     recordOpener(tab.id, tab.openerTabId);
-    finalizeAdvancedApply(tab.openerTabId);
+    getPendingApps().then((pendingApps) => {
+      if (!(tab.openerTabId in pendingApps)) return;
+      markApplicationFlowTab(tab.id, true);
+      finalizeAdvancedApply(tab.openerTabId);
+    });
   }
 });
 
@@ -944,4 +999,5 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   clearOpenerEntry(tabId);
   clearTabState(tabId);
   clearPendingApp(tabId);
+  clearApplicationFlowTab(tabId);
 });
