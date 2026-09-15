@@ -228,6 +228,11 @@ function extractJobInfo() {
   return linkedIn || extractFromMeta() || extractFromDom();
 }
 
+function isApplicationConfirmationPage() {
+  const pageText = (document.body?.innerText || '').slice(0, 30000);
+  return /\b(?:thank you for applying|application (?:submitted|received)|thanks for applying)\b/i.test(pageText);
+}
+
 /* ---------------------------------------------------------------------
  * LinkedIn Easy Apply detection — v1.3.1
  * See the doc block at the top of this file for the full reasoning.
@@ -567,6 +572,8 @@ let lastProcessedKey = null;
 
 async function runDetection() {
   try {
+    if (isApplicationConfirmationPage()) return;
+
     const info = extractJobInfo();
     if (!info || !info.title) return;
 

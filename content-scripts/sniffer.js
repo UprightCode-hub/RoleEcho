@@ -33,8 +33,14 @@ function hasJobShapedContent() {
   return matchingHints >= 2;
 }
 
+function isApplicationConfirmationPage() {
+  const pageText = (document.body?.innerText || '').slice(0, 30000);
+  return /\b(?:thank you for applying|application (?:submitted|received)|thanks for applying)\b/i.test(pageText);
+}
+
 function isWorthChecking() {
-  return URL_HINTS.test(location.href) || hasJobPostingJsonLd() || hasJobShapedContent();
+  return !isApplicationConfirmationPage() &&
+    (URL_HINTS.test(location.href) || hasJobPostingJsonLd() || hasJobShapedContent());
 }
 
 function sendDetectionMessage() {

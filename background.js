@@ -27,6 +27,7 @@ const ASK_ABOUT_SITES_KEY = 'jds_ask_about_sites'; // storage.local — boolean,
 const STATS_KEY = 'jds_stats_lifetime';        // storage.local — { seen, duplicates } — see note below
 const APP_DAILY_KEY = 'jds_app_daily';         // storage.local — { "YYYY-MM-DD": { easy, advanced } }, see note below
 const APP_PLATFORM_KEY = 'jds_app_platforms';  // storage.local — { hostname: count }, lifetime
+const APPLICATION_HUB_HOSTS = new Set(['jobright.ai']); // hubs, not application source platforms
 const INJECTED_TABS_KEY = 'jds_injected_tabs'; // storage.session
 const OPENER_MAP_KEY = 'jds_tab_openers';      // storage.session
 const TAB_STATE_KEY = 'jds_tab_state';         // storage.session — powers badge + popup
@@ -58,6 +59,7 @@ const KNOWN_JOB_HOSTS = [
 function isKnownJobHost(url) {
   let hostname;
   try { hostname = new URL(url).hostname; } catch { return false; }
+  if (isApplicationHubHost(hostname)) return false;
   return KNOWN_JOB_HOSTS.some(host => hostname === host || hostname.endsWith('.' + host));
 }
 
@@ -257,7 +259,16 @@ async function getAppDaily() {
 
 async function getAppPlatforms() {
   const { [APP_PLATFORM_KEY]: map } = await chrome.storage.local.get(APP_PLATFORM_KEY);
-  return map || {};
+  const platforms = Object.fromEntries(Object.entries(map || {}).filter(([host]) => !isApplicationHubHost(host)));
+  if (Object.keys(platforms).length !== Object.keys(map || {}).length) {
+    await chrome.storage.local.set({ [APP_PLATFORM_KEY]: platforms });
+  }
+  return platforms;
+}
+
+function isApplicationHubHost(host) {
+  return APPLICATION_HUB_HOSTS.has(host) ||
+    Array.from(APPLICATION_HUB_HOSTS).some(hub => host.endsWith('.' + hub));
 }
 
 // type is 'easy' | 'advanced'. host is whatever hostnameOf(payload.url)
@@ -271,7 +282,7 @@ async function recordApplication(type, host) {
   daily[key] = entry;
   await chrome.storage.local.set({ [APP_DAILY_KEY]: daily });
 
-  if (host) {
+  if (host && !isApplicationHubHost(host)) {
     const platforms = await getAppPlatforms();
     platforms[host] = (platforms[host] || 0) + 1;
     await chrome.storage.local.set({ [APP_PLATFORM_KEY]: platforms });
@@ -600,6 +611,9 @@ async function handleCheckJob(payload, sender) {
   const tabId = sender?.tab?.id;
   if (typeof tabId !== 'number') return { duplicate: false };
 
+  const hostname = hostnameOf(payload.url);
+  if (isApplicationHubHost(hostname)) return { duplicate: false, applicationHub: true };
+
   if (await isApplicationFlowTab(tabId)) return { duplicate: false, applicationFlow: true };
 
   // v1.3 — tier-3 gate. Tier 1 (payload.source === 'jsonld') and tier 2
@@ -607,7 +621,6 @@ async function handleCheckJob(payload, sender) {
   // matching, same as before. Anything else needs either a prior "yes"
   // in the site trust list, or gets asked now — unless the user has
   // turned asking off.
-  const hostname = hostnameOf(payload.url);
   const isTrustedSource = payload.source === 'jsonld' || isKnownJobHost(payload.url);
   if (!isTrustedSource && hostname) {
     const askEnabled = await getAskAboutSites();
@@ -905,6 +918,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 // and from the popup (a normal extension page, also regular messaging).
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === MSG_JOB_PAGE_DETECTED && sender.tab?.id != null) {
+    if (isApplicationHubHost(hostnameOf(sender.tab.url))) return false;
     injectEngine(sender.tab.id);
     return false;
   }
