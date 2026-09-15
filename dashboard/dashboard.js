@@ -147,7 +147,7 @@ function renderActivity(data) {
     } else if (company) {
       detail = escapeHtml(company);
     }
-    return `<div class="activity-item"><div class="act-dot ${meta.dotClass}"></div><div class="act-body"><div class="act-title">${escapeHtml(title)}</div>${detail ? `<div class="act-detail">${detail}</div>` : ''}<div class="act-time">${meta.label} · ${escapeHtml(formatTimestamp(entry.timestamp))}</div></div></div>`;
+    return `<div class="activity-item"><div class="act-dot ${meta.dotClass}" aria-hidden="true"></div><div class="act-body"><div class="act-title">${escapeHtml(title)}</div>${detail ? `<div class="act-detail">${detail}</div>` : ''}<div class="act-time">${meta.label} · ${escapeHtml(formatTimestamp(entry.timestamp))}</div></div></div>`;
   }).join('');
 }
 
@@ -221,22 +221,44 @@ function renderTrust(data) {
         type: MSG_SET_SITE_TRUST,
         hostname: row.dataset.hostname,
         trusted: button.dataset.trusted === 'true'
-      }, loadDashboard);
+      }, response => {
+        if (chrome.runtime.lastError || !response?.ok) {
+          button.disabled = false;
+          document.getElementById('settings-feedback').textContent = 'Could not update that site. Try again.';
+          return;
+        }
+        loadDashboard();
+      });
     });
   });
 }
 
 function renderSettings(data) {
-  document.getElementById('toggle-ask-sites').checked = data.askAboutSites;
+  const askSitesToggle = document.getElementById('toggle-ask-sites');
+  const askSitesLabel = askSitesToggle.closest('.settings-row')?.querySelector('.settings-label');
+  if (askSitesLabel && !askSitesLabel.id) askSitesLabel.id = 'ask-sites-label';
+  if (askSitesLabel) askSitesToggle.setAttribute('aria-labelledby', askSitesLabel.id);
+  askSitesToggle.checked = data.askAboutSites;
 }
 
 document.getElementById('toggle-ask-sites').addEventListener('change', event => {
-  chrome.runtime.sendMessage({ type: MSG_SET_ASK_ABOUT_SITES, enabled: event.target.checked });
+  const toggle = event.target;
+  const previousValue = !toggle.checked;
+  chrome.runtime.sendMessage({ type: MSG_SET_ASK_ABOUT_SITES, enabled: toggle.checked }, response => {
+    if (chrome.runtime.lastError || !response?.ok) {
+      toggle.checked = previousValue;
+      document.getElementById('settings-feedback').textContent = 'Could not save that setting. Try again.';
+    }
+  });
 });
 
 document.getElementById('btn-clear').addEventListener('click', () => {
   if (!confirm('Clear all tracked job postings, activity history, muted listings, application totals, and platform visit totals? This cannot be undone.')) return;
-  chrome.runtime.sendMessage({ type: MSG_CLEAR_RECORDS }, () => {
+  chrome.runtime.sendMessage({ type: MSG_CLEAR_RECORDS }, response => {
+    if (chrome.runtime.lastError || !response?.ok) {
+      document.getElementById('settings-feedback').textContent = 'Could not clear the tracked data. Try again.';
+      return;
+    }
     document.getElementById('settings-feedback').textContent = 'Cleared.';
     loadDashboard();
   });
@@ -245,6 +267,10 @@ document.getElementById('btn-clear').addEventListener('click', () => {
 document.getElementById('btn-backup').addEventListener('click', () => {
   chrome.runtime.sendMessage({ type: MSG_GET_BACKUP }, async response => {
     const feedback = document.getElementById('settings-feedback');
+    if (chrome.runtime.lastError || !response) {
+      feedback.textContent = 'Could not create a backup. Try again.';
+      return;
+    }
     try {
       await navigator.clipboard.writeText(JSON.stringify(response?.records ?? {}, null, 2));
       feedback.textContent = 'Backup JSON copied to clipboard.';
@@ -259,7 +285,10 @@ document.getElementById('btn-backup').addEventListener('click', () => {
 // tab. Dashboard is a normal extension page (same messaging/permissions
 // tier as popup.js/onboarding.js), so chrome.tabs is available directly.
 document.getElementById('btn-reopen-setup').addEventListener('click', () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/onboarding.html') });
+  chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/onboarding.html') }).catch(error => {
+    document.getElementById('settings-feedback').textContent = 'Could not open the setup guide.';
+    console.warn('[SeenDisJob] could not open setup guide:', error);
+  });
 });
 
 // Privacy & permissions — on-demand probe of chrome.userScripts, same
@@ -295,7 +324,10 @@ function loadDashboard() {
   refreshInFlight = true;
   chrome.runtime.sendMessage({ type: MSG_GET_DASHBOARD_DATA }, response => {
     refreshInFlight = false;
-    if (!response) return;
+    if (chrome.runtime.lastError || !response) {
+      document.getElementById('refresh-status').textContent = 'Could not refresh';
+      return;
+    }
     dashboardData = response;
     renderConsent(response.consent);
     renderUpdateBanner(response.updateStatus);

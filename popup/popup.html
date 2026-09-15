@@ -1,18 +1,9 @@
 <!--
   FILE: popup/popup.html
-  v1.3 — glass/status-first redesign. The existing action IDs are kept
-  because popup.js in this checkout still wires backup and clear directly.
-
-  v1.1.0 — the toolbar popup. Didn't exist before this version; the
-  extension had no visible feedback of any kind. This answers three
-  questions at a glance: is it on, what happened on THIS tab, and how
-  many jobs are tracked overall — plus the two commands the original
-  Tampermonkey script exposed via GM_registerMenuCommand.
-
-  v1.2.1 — added the #muted-note / #empty-state / #history-panel /
-  #history-list markup that popup.js (v1.2.0) already expected but this
-  file never gained, which was throwing "Cannot read properties of null
-  (reading 'style')" every time the popup opened.
+  v1.4 — Material 3–inspired tonal redesign. Replaces the glass/translucent
+  v1.3 visual system with opaque tonal surfaces and a fixed elevation scale.
+  No IDs, classes referenced by popup.js, or message contracts were changed.
+  popup.js is untouched by this pass (verified below).
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -20,216 +11,327 @@
 <meta charset="utf-8">
 <title>SeenDisJob</title>
 <style>
+  /* ============================================================
+     TOKENS — opaque tonal palette. Neutral gray/black/white base,
+     three restrained semantic accents (success / warning / error).
+     Every surface below is a solid color; no alpha compositing is
+     used for backgrounds, only for the two hairline drop-shadows.
+     ============================================================ */
   :root {
-    --paper: #F5F4F0;
-    --ink: #17181B;
-    --ink-soft: #55585E;
-    --ink-faint: #8A8D93;
-    --rule: #D9D7D0;
-    --alert: #C93C4E;
-    --alert-bg: #FBEAEC;
-    --ok: #1E8E3E;
-    --ok-bg: #E9F6EC;
-    --ok-rule: #C3E0CC;
-    --alert-rule: #F0CDD2;
-    --watch-bg: #EFEEE9;
+    /* Surfaces (lowest → highest emphasis) */
+    --page-bg:               #EAEAE6;
+    --surface:                #FFFFFF;
+    --surface-container:      #F2F2EE;
+    --surface-container-high: #E7E7E1;
+    --surface-container-highest: #DCDCD5;
+    --surface-raised:         #FFFFFF; /* paired with --elevation-1 shadow */
+
+    /* Outlines */
+    --outline:        #D8D7D0;
+    --outline-strong:  #8F8F87;
+
+    /* Ink */
+    --ink-primary:    #191916;
+    --ink-secondary:  #54544E;
+    --ink-tertiary:   #74746D;
+    --on-inverse:     #FFFFFF;
+
+    /* Semantic — success */
+    --success:            #1E7A34;
+    --success-container:  #DCEFDD;
+    --on-success-container: #123D1D;
+    --success-outline:    #A9D3AE;
+
+    /* Semantic — warning */
+    --warning:            #7A4B00;
+    --warning-container:  #F3E2C0;
+    --on-warning-container: #4A2E00;
+    --warning-outline:    #DDBD7E;
+
+    /* Semantic — error */
+    --error:            #A5231B;
+    --error-container:  #F6D9D6;
+    --on-error-container: #5C140E;
+    --error-outline:    #E3AFA9;
+
+    /* Elevation — flat, neutral drop-shadows only (no glow, no color) */
+    --elevation-1: 0 1px 2px rgba(0,0,0,.07), 0 1px 1px rgba(0,0,0,.05);
+
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
-    --glass-dense: rgba(255,255,255,0.80);
-    --glass-shadow-dense: 0 4px 16px rgba(23,24,27,0.07), inset 0 1px 0 rgba(255,255,255,0.6);
-    --ink-glass: rgba(23,24,27,0.85);
-    --alert-glass: rgba(201,60,78,0.85);
   }
+
   * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
   body {
-    position: relative;
     margin: 0;
     width: 320px;
-    background: var(--paper);
-    color: var(--ink);
+    background: var(--page-bg);
+    color: var(--ink-primary);
     font-family: var(--sans);
     font-size: 13.5px;
     line-height: 1.45;
-    overflow-x: hidden;
   }
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background:
-      radial-gradient(60% 50% at 15% 0%, rgba(184,134,11,0.14), transparent 60%),
-      radial-gradient(55% 45% at 90% 10%, rgba(30,142,62,0.12), transparent 60%),
-      radial-gradient(60% 60% at 50% 110%, rgba(201,60,78,0.07), transparent 60%),
-      var(--paper);
-  }
+
+  a { color: inherit; }
+
+  /* ============================================================
+     1. BRAND + STATUS
+     ============================================================ */
   header {
-    padding: 14px 16px 12px;
-    border-bottom: 1px solid var(--rule);
+    padding: 14px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--outline);
     display: flex;
     align-items: center;
     gap: 10px;
   }
-  header img { width: 24px; height: 24px; flex-shrink: 0; }
+  header img { width: 24px; height: 24px; flex-shrink: 0; border-radius: 5px; }
   header h1 {
     font-size: 13.5px;
     font-weight: 700;
     margin: 0;
     letter-spacing: -0.01em;
+    color: var(--ink-primary);
   }
-  header .sub { font-size: 11px; color: var(--ink-faint); margin-top: 1px; }
+  header .sub {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-secondary);
+    margin-top: 2px;
+  }
 
+  .update-banner,
+  .consent-banner {
+    margin: 10px 16px 0;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .update-banner {
+    background: var(--success-container);
+    color: var(--on-success-container);
+    border: 1px solid var(--success-outline);
+  }
+  .update-banner a {
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .update-banner a:focus-visible { outline: 2px solid var(--on-success-container); outline-offset: 2px; border-radius: 2px; }
+
+  .consent-banner {
+    background: var(--warning-container);
+    color: var(--on-warning-container);
+    border: 1px solid var(--warning-outline);
+  }
+  .consent-banner a {
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .consent-banner a:focus-visible { outline: 2px solid var(--on-warning-container); outline-offset: 2px; border-radius: 2px; }
+
+  /* ============================================================
+     2. CURRENT-TAB RESULT
+     ============================================================ */
   .status-card {
     margin: 14px 16px 0;
-    padding: 16px 16px 14px;
-    border-radius: 16px;
-    background: var(--glass-dense);
-    border: 1px solid var(--rule);
-    backdrop-filter: blur(18px) saturate(1.4);
-    -webkit-backdrop-filter: blur(18px) saturate(1.4);
-    box-shadow: var(--glass-shadow-dense);
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--surface-raised);
+    border: 1px solid var(--outline);
+    box-shadow: var(--elevation-1);
   }
-  .status-card.ok { background: rgba(233,246,236,0.72); border-color: var(--ok-rule); }
-  .status-card.alert { background: rgba(251,234,236,0.72); border-color: var(--alert-rule); }
+  .status-card.ok {
+    background: var(--success-container);
+    border-color: var(--success-outline);
+  }
+  .status-card.alert {
+    background: var(--error-container);
+    border-color: var(--error-outline);
+  }
 
   .status-row { display: flex; align-items: flex-start; gap: 10px; }
   .status-dot {
-    width: 11px; height: 11px; border-radius: 50%;
-    background: var(--ink-faint);
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--ink-tertiary);
     margin-top: 4px; flex-shrink: 0;
-    box-shadow: 0 0 0 3px rgba(255,255,255,0.45);
+    box-shadow: 0 0 0 2px var(--surface-raised);
   }
-  .status-card.ok .status-dot { background: var(--ok); }
-  .status-card.alert .status-dot { background: var(--alert); }
+  .status-card.ok .status-dot    { background: var(--success); box-shadow: 0 0 0 2px var(--success-container); }
+  .status-card.alert .status-dot { background: var(--error);   box-shadow: 0 0 0 2px var(--error-container); }
 
-  .status-title { font-weight: 700; font-size: 14.5px; margin-bottom: 3px; }
-  .status-card.ok .status-title { color: var(--ok); }
-  .status-card.alert .status-title { color: var(--alert); }
-  .status-detail { color: var(--ink-soft); font-size: 12.5px; }
-  .status-detail b { color: var(--ink); }
+  .status-title { font-weight: 700; font-size: 14px; margin-bottom: 2px; color: var(--ink-primary); }
+  .status-card.ok .status-title    { color: var(--on-success-container); }
+  .status-card.alert .status-title { color: var(--on-error-container); }
 
-  .consent-banner {
-    margin: 14px 16px 0;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: var(--glass-dense);
-    border: 1px solid #F0DFAF;
-    backdrop-filter: blur(12px) saturate(1.3);
-    -webkit-backdrop-filter: blur(12px) saturate(1.3);
-    font-size: 12.5px;
-    color: var(--ink-soft);
-  }
-  .consent-banner a { color: var(--ink); font-weight: 600; }
+  .status-detail { color: var(--ink-secondary); font-size: 12.5px; }
+  .status-card.ok .status-detail    { color: var(--on-success-container); }
+  .status-card.alert .status-detail { color: var(--on-error-container); }
+  .status-detail b { font-weight: 700; color: inherit; }
 
-  .update-banner {
-    margin: 10px 16px 0;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: var(--glass-dense);
-    border: 1px solid var(--ok-rule);
-    backdrop-filter: blur(12px) saturate(1.3);
-    -webkit-backdrop-filter: blur(12px) saturate(1.3);
-    font-size: 12.5px;
-    color: var(--ink-soft);
-  }
-  .update-banner a { color: var(--ink); font-weight: 600; }
-
+  /* ============================================================
+     3. TRACKED-JOB COUNT
+     ============================================================ */
   .stat-row {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin: 10px 16px 0;
-    padding-bottom: 10px;
-    border-bottom: 1px solid rgba(217,215,208,0.7);
+    margin: 12px 16px 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--surface-container);
   }
-  .stat-row .count { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink-soft); }
-  .stat-row .label { color: var(--ink-faint); font-size: 11px; text-align: right; max-width: 200px; }
-
-  .actions { padding: 12px 16px 14px; display: flex; flex-direction: column; gap: 8px; }
-  button {
-    font-family: var(--sans);
-    font-size: 12.5px;
-    font-weight: 600;
-    padding: 9px 13px;
-    border-radius: 999px;
-    cursor: pointer;
-    border: 1px solid var(--rule);
-    background: rgba(255,255,255,0.72);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    color: var(--ink);
-    text-align: left;
+  .stat-row .count {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink-primary);
   }
-  button:hover {
-    background: var(--ink-glass); color: var(--paper); border-color: var(--ink);
-    backdrop-filter: blur(10px) saturate(1.3);
-    -webkit-backdrop-filter: blur(10px) saturate(1.3);
-  }
-  button.danger:hover {
-    background: var(--alert-glass); border-color: var(--alert);
-    backdrop-filter: blur(10px) saturate(1.3);
-    -webkit-backdrop-filter: blur(10px) saturate(1.3);
-  }
-
-  #action-feedback {
-    padding: 0 16px 12px;
-    font-size: 11.5px;
-    color: var(--ink-faint);
-    min-height: 14px;
+  .stat-row .label {
+    color: var(--ink-tertiary);
+    font-size: 11px;
+    text-align: right;
+    max-width: 190px;
   }
 
   .muted-note {
     margin: 6px 16px 0;
     font-size: 11px;
-    color: var(--ink-faint);
+    color: var(--ink-tertiary);
     text-align: right;
   }
   .empty-state {
-    margin: 14px 16px 0;
+    margin: 10px 16px 0;
     padding: 10px 12px;
     border-radius: 8px;
-    background: var(--glass-dense);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px dashed var(--rule);
+    background: var(--surface-container);
+    border: 1px solid var(--outline);
     font-size: 12px;
-    color: var(--ink-soft);
+    color: var(--ink-secondary);
     text-align: center;
   }
+
+  /* ============================================================
+     4. RECENT ACTIVITY
+     ============================================================ */
   .history-panel { margin: 14px 16px 0; }
   .history-heading {
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .03em;
-    color: var(--ink-faint);
+    color: var(--ink-tertiary);
     margin-bottom: 6px;
+  }
+  #history-list {
+    max-height: 168px;
+    overflow-y: auto;
+    border: 1px solid var(--outline);
+    border-radius: 8px;
+    background: var(--surface);
   }
   .hist-item {
     display: flex;
     gap: 8px;
-    padding: 7px 0;
-    border-bottom: 1px solid var(--rule);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--outline);
   }
   .hist-item:last-child { border-bottom: none; }
   .hist-dot {
     width: 7px; height: 7px; border-radius: 50%;
-    margin-top: 4px; flex-shrink: 0;
-    background: var(--ink-faint);
+    margin-top: 5px; flex-shrink: 0;
+    background: var(--ink-tertiary);
   }
-  .hist-dot.ok { background: var(--ok); }
-  .hist-dot.alert { background: var(--alert); }
-  .hist-dot.muted { background: var(--ink-faint); }
-  .hist-body { min-width: 0; }
+  .hist-dot.ok    { background: var(--success); }
+  .hist-dot.alert { background: var(--error); }
+  .hist-dot.muted { background: var(--ink-tertiary); }
+  .hist-body { min-width: 0; flex: 1; }
   .hist-label {
-    font-size: 12px; font-weight: 600;
+    font-size: 12px; font-weight: 600; color: var(--ink-primary);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .hist-detail {
-    font-size: 11.5px; color: var(--ink-soft);
+    font-size: 11.5px; color: var(--ink-secondary);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .hist-time { font-size: 10.5px; color: var(--ink-faint); margin-top: 1px; }
+  .hist-detail em { font-style: normal; font-weight: 600; color: var(--ink-primary); }
+  .hist-time { font-size: 10.5px; color: var(--ink-tertiary); margin-top: 1px; }
+
+  /* ============================================================
+     5. MAIN ACTIONS — filled / tonal / outlined button variants
+     ============================================================ */
+  .actions {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-top: 1px solid var(--outline);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  button {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 10px 13px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    text-align: left;
+    width: 100%;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease, transform .06s ease;
+  }
+  button:active { transform: translateY(1px); }
+  button:focus-visible {
+    outline: 2px solid var(--ink-primary);
+    outline-offset: 2px;
+  }
+
+  /* Filled — primary action */
+  #btn-dashboard {
+    background: var(--ink-primary);
+    color: var(--on-inverse);
+    border-color: var(--ink-primary);
+  }
+  #btn-dashboard:hover  { background: #000000; border-color: #000000; }
+  #btn-dashboard:active { background: #000000; }
+
+  /* Tonal — secondary action */
+  #btn-backup {
+    background: var(--surface-container-high);
+    color: var(--ink-primary);
+    border-color: var(--surface-container-high);
+  }
+  #btn-backup:hover  { background: var(--surface-container-highest); border-color: var(--surface-container-highest); }
+  #btn-backup:active { background: #D2D2CB; border-color: #D2D2CB; }
+
+  /* Outlined destructive — de-emphasized until interacted with */
+  button.danger {
+    background: var(--surface);
+    color: var(--error);
+    border-color: var(--error-outline);
+  }
+  button.danger:hover {
+    background: var(--error-container);
+    color: var(--on-error-container);
+    border-color: var(--error);
+  }
+  button.danger:active {
+    background: var(--error);
+    color: var(--on-inverse);
+    border-color: var(--error);
+  }
+
+  #action-feedback {
+    padding: 0 16px 14px;
+    font-size: 11.5px;
+    color: var(--ink-secondary);
+    min-height: 14px;
+  }
 </style>
 </head>
 <body>
@@ -272,10 +374,10 @@
 
   <div class="actions">
     <button id="btn-dashboard" type="button">Open dashboard</button>
-    <button id="btn-backup">Copy tracked-job backup to clipboard</button>
-    <button id="btn-clear" class="danger">Clear all tracked job data</button>
+    <button id="btn-backup" type="button">Copy tracked-job backup to clipboard</button>
+    <button id="btn-clear" type="button" class="danger">Clear all tracked job data</button>
   </div>
-  <div id="action-feedback"></div>
+  <div id="action-feedback" aria-live="polite"></div>
 
   <script src="popup.js"></script>
 </body>

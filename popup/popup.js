@@ -4,6 +4,12 @@
  * dashboard navigation.
  * Talks to background.js over chrome.runtime.sendMessage (normal
  * extension page — full chrome.* access, no USER_SCRIPT restrictions).
+ *
+ * Unchanged by the v1.4 visual redesign (popup.html). Every ID and the
+ * two dynamic class contracts this file relies on — statusCard's
+ * 'ok'/'alert' classes and the hist-dot 'ok'/'alert'/'muted' classes it
+ * generates — are preserved in the new markup, so no logic here needed
+ * to change.
  */
 
 const MSG_GET_STATUS   = 'GET_STATUS';

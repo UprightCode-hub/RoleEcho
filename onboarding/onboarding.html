@@ -1,7 +1,9 @@
 <!--
   FILE: onboarding/onboarding.html
-  v1.3.0 — glass + layout pass. IDs and onboarding.js behavior remain
-  unchanged. The hero caption remains accessible to screen readers.
+  v1.4.0 — ported to the Material 3 tonal system already used in
+  popup.html/engine.js (solid surfaces, no blur/gradients/translucency).
+  IDs and onboarding.js behavior remain unchanged. The hero caption
+  remains accessible to screen readers.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -29,33 +31,17 @@
             Helvetica, Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono",
             Menlo, Consolas, monospace;
-
-    --glass-sheer: rgba(255,255,255,0.55);
-    --glass-dense: rgba(255,255,255,0.80);
-    --glass-edge: rgba(255,255,255,0.75);
-    --glass-shadow: 0 10px 30px rgba(23,24,27,0.10), inset 0 1px 0 rgba(255,255,255,0.55);
-    --ink-glass: rgba(23,24,27,0.85);
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    position: relative;
     background: var(--paper);
     color: var(--ink);
     font-family: var(--sans);
     font-size: 15px;
     line-height: 1.6;
     min-height: 100vh;
-  }
-  body::before {
-    content: '';
-    position: fixed; inset: 0; z-index: -1;
-    background:
-      radial-gradient(40% 46% at 10% 6%, rgba(184,134,11,0.14), transparent 62%),
-      radial-gradient(36% 42% at 90% 12%, rgba(30,142,62,0.12), transparent 62%),
-      radial-gradient(50% 55% at 50% 105%, rgba(201,60,78,0.07), transparent 62%),
-      var(--paper);
   }
 
   /* ── Brand stripe ────────────────────────────────────────────── */
@@ -92,12 +78,10 @@
   /* ── Hero: browser tab strip demo ────────────────────────────── */
   .hero {
     padding: 20px 20px 0;
-    background: var(--glass-sheer);
-    border: 1px solid var(--glass-edge);
-    backdrop-filter: blur(20px) saturate(1.5);
-    -webkit-backdrop-filter: blur(20px) saturate(1.5);
-    border-radius: 16px;
-    margin-bottom: 40px;
+    background: var(--paper-hi);
+    border: 1px solid var(--rule-strong);
+    border-radius: 8px;
+    margin-bottom: 32px;
     overflow: hidden;
   }
   .tabstrip {
@@ -141,16 +125,17 @@
     width: 10px; height: 10px;
     border-radius: 50%;
     background: var(--amber);
-    animation: pulse 2s ease-out 0.7s 1;
+    border: 1.5px solid var(--paper-hi);
+    opacity: 0;
+    animation: appear 0.25s ease-out 0.7s 1 forwards;
   }
-  @keyframes pulse {
-    0%   { box-shadow: 0 0 0 0    rgba(184,134,11,.5); }
-    65%  { box-shadow: 0 0 0 10px rgba(184,134,11,0); }
-    100% { box-shadow: 0 0 0 0    rgba(184,134,11,0); }
+  @keyframes appear {
+    0%   { opacity: 0; transform: scale(0.4); }
+    100% { opacity: 1; transform: scale(1); }
   }
 
   /* Floor line separating tabs from caption */
-  .hero-floor { height: 1px; background: #C8C5BD; margin: 0 -20px; }
+  .hero-floor { height: 1px; background: var(--rule-strong); margin: 0 -20px; }
 
   .hero-caption {
     padding: 14px 0 18px;
@@ -191,13 +176,24 @@
     transition: background 0.3s ease;
   }
 
-  /* Active */
+  /* Active — current step is unambiguous: ink label + solid ink bar */
   ol#progress-rail li[data-state="active"] { color: var(--ink); }
   ol#progress-rail li[data-state="active"]::before { background: var(--ink); }
 
-  /* Done — filled green with SVG checkmark */
+  /* Done — green bar + label, checkmark appended after the text */
   ol#progress-rail li[data-state="done"] { color: var(--ok); }
   ol#progress-rail li[data-state="done"]::before { background: var(--ok); }
+  ol#progress-rail li[data-state="done"]::after {
+    content: '✓';
+    display: inline-block;
+    margin-left: 5px;
+    font-weight: 700;
+    animation: check-pop 180ms ease-out;
+  }
+  @keyframes check-pop {
+    0%   { opacity: 0; transform: scale(0.5); }
+    100% { opacity: 1; transform: scale(1); }
+  }
 
   /* ── Content headings ────────────────────────────────────────── */
   section h1 {
@@ -215,16 +211,14 @@
     line-height: 1.6;
   }
 
-  /* Trust / privacy callout on consent screen */
+  /* Trust / privacy callout on consent screen — solid tonal surface */
   .trust {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     padding: 9px 14px;
-    background: rgba(233,246,236,0.75);
+    background: var(--ok-bg);
     border: 1px solid var(--ok-rule);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
     border-radius: 8px;
     font-size: 13px;
     color: var(--ok);
@@ -237,11 +231,9 @@
   .how-it-works {
     margin: 0 0 28px;
     padding: 4px 18px;
-    background: var(--glass-dense);
-    border: 1px solid var(--rule);
-    border-radius: 14px;
-    backdrop-filter: blur(14px) saturate(1.25);
-    -webkit-backdrop-filter: blur(14px) saturate(1.25);
+    background: var(--paper-hi);
+    border: 1px solid var(--rule-strong);
+    border-radius: 8px;
   }
   .how-it-works h2 {
     padding: 18px 0 12px;
@@ -305,54 +297,53 @@
     outline: 2px solid var(--ink);
     outline-offset: 2px;
   }
+  button:active { transform: translateY(1px); }
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
 
+  /* Filled primary — dominant, solid, no ambiguity about the main action */
   .btn-primary {
-    background: var(--ink-glass);
-    color: var(--paper);
-    border-color: var(--ink);
-    backdrop-filter: blur(10px) saturate(1.3);
-    -webkit-backdrop-filter: blur(10px) saturate(1.3);
-  }
-  .btn-primary:hover {
-    background: #2E3035;
-    box-shadow: 0 2px 10px rgba(23,24,27,.2);
-  }
-
-  .btn-secondary {
-    background: rgba(255,255,255,0.5);
-    color: var(--ink-soft);
-    border-color: var(--rule-strong);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-  .btn-secondary:hover {
     background: var(--ink);
     color: var(--paper);
     border-color: var(--ink);
   }
+  .btn-primary:hover { background: #2E3035; }
+  .btn-primary:active { background: var(--ink); }
+
+  /* Outlined secondary — visibly lighter weight than primary */
+  .btn-secondary {
+    background: var(--paper-hi);
+    color: var(--ink-soft);
+    border-color: var(--rule-strong);
+  }
+  .btn-secondary:hover {
+    background: var(--rule);
+    color: var(--ink);
+    border-color: var(--rule-strong);
+  }
+  .btn-secondary:active { background: var(--rule-strong); }
 
   /* ── Guide steps (HTML generated by onboarding.js) ────────────── */
   #guide-steps {
     margin: 28px 0;
-    background: var(--glass-dense);
-    border: 1px solid var(--rule);
-    border-radius: 14px;
+    background: var(--paper-hi);
+    border: 1px solid var(--rule-strong);
+    border-radius: 8px;
     padding: 4px 18px;
-    backdrop-filter: blur(14px) saturate(1.25);
-    -webkit-backdrop-filter: blur(14px) saturate(1.25);
   }
 
-  /* Pin-step instructions box — same glass treatment as #guide-steps,
+  /* Pin-step instructions box — same solid treatment as #guide-steps,
      kept as its own selector so #guide-steps (and onboarding.js's use of
      it) is untouched. */
   #pin-steps {
     margin: 20px 0;
-    background: var(--glass-dense);
-    border: 1px solid var(--rule);
-    border-radius: 14px;
+    background: var(--paper-hi);
+    border: 1px solid var(--rule-strong);
+    border-radius: 8px;
     padding: 4px 18px;
-    backdrop-filter: blur(14px) saturate(1.25);
-    -webkit-backdrop-filter: blur(14px) saturate(1.25);
   }
 
   /* JS generates: <div class="step"><div class="step-num">1</div><p>…</p></div> */
@@ -378,7 +369,12 @@
     flex-shrink: 0;
     margin-top: 1px;
   }
-  .step p {
+  .step-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .step > p,
+  .step-body p {
     flex: 1;
     margin: 0;
     font-size: 14px;
@@ -386,7 +382,22 @@
     line-height: 1.6;
     max-width: 44ch;
   }
-  .step p b { color: var(--ink); font-weight: 600; }
+  .step > p b,
+  .step-body p b { color: var(--ink); font-weight: 600; }
+
+  /* Locator diagrams attached to guide-steps — flat schematic, not a
+     screenshot, so it doesn't try to be pixel-accurate to Chrome's UI. */
+  .step-diagram { margin-top: 12px; max-width: 320px; }
+  .step-diagram-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .step-diagram-caption {
+    margin: 4px 0 0;
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
 
   code {
     font-family: var(--mono);
@@ -406,13 +417,12 @@
     padding: 13px 16px;
     border-radius: 8px;
     font-size: 13.5px;
-    border: 1px solid var(--rule);
-    background: var(--glass-dense);
-    backdrop-filter: blur(14px) saturate(1.3);
-    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    border: 1px solid var(--rule-strong);
+    background: var(--paper-hi);
     color: var(--ink-soft);
     font-family: var(--mono);
     line-height: 1.5;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
   }
   #guide-status.show    { display: block; }
   #guide-status.ok      { background: var(--ok-bg);    border-color: var(--ok-rule);    color: var(--ok); }
@@ -431,10 +441,20 @@
   .gap { height: 20px; }
   .hidden { display: none !important; }
 
+  /* Inline failure state for actions that write to chrome.storage —
+     reuses the existing amber "warning" tokens, no new color added. */
+  .field-error {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--amber);
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .dot { animation: none; }
+    .dot { animation: none; opacity: 1; }
     ol#progress-rail li::before,
     ol#progress-rail li::after { transition: none; }
+    ol#progress-rail li[data-state="done"]::after { animation: none; }
+    #guide-status { transition: none; }
   }
 </style>
 </head>
@@ -523,8 +543,8 @@
     </div>
 
     <div class="trust" role="note">
-      <!-- Lock icon -->
-      <svg width="14" height="15" viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Lock icon — decorative, the text carries the meaning -->
+      <svg width="14" height="15" viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <rect x="1.5" y="6.5" width="11" height="8" rx="1.5"
               stroke="#1E8E3E" stroke-width="1.5"/>
         <path d="M4 6.5V5A3 3 0 0110 5v1.5"
@@ -538,6 +558,9 @@
       <button id="btn-consent-yes" class="btn-primary">Allow content checks</button>
       <button id="btn-consent-no"  class="btn-secondary">No thanks</button>
     </div>
+    <!-- Shown by the consent handlers in onboarding.js if the storage
+         write fails; the screen does not advance until it succeeds. -->
+    <p id="consent-error" class="field-error hidden" role="alert"></p>
   </section>
 
   <!-- ── Screen 2: declined ─────────────────────────────────────── -->
@@ -547,11 +570,9 @@
       The extension stays fully inactive — it won't read any page content
       or watch for job postings.
     </p>
-    <p style="font-size:13.5px; color:var(--ink-faint); margin-bottom:28px; max-width:40ch;">
-      To change your mind, reinstall and you'll see this screen again.
-    </p>
     <div class="actions">
       <button id="btn-close-1" class="btn-primary">Close this tab</button>
+      <button id="btn-reconsider" class="btn-secondary">Change your mind</button>
     </div>
   </section>
 
